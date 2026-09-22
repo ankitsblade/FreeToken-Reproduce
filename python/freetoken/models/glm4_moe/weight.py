@@ -87,6 +87,8 @@ def _iter_nvfp4_resident(
     yield f"{dst_prefix}.weight", packed
     yield f"{dst_prefix}.weight_scale", scale
     yield f"{dst_prefix}.weight_global", g.expand(packed.shape[0]).contiguous()
+    if reader.has(f"{src_prefix}.input_scale"):
+        yield f"{dst_prefix}.input_scale", reader.get(f"{src_prefix}.input_scale").reshape(()).to(torch.float32)
 
 
 def _iter_attn_df11(
@@ -166,11 +168,11 @@ def _iter_resident_weights(reader, config, primary) -> Iterator[tuple[str, torch
             for proj in ("gate_proj", "up_proj", "down_proj"):
                 yield from _iter_nvfp4_resident(reader, f"{m}.{proj}", f"{m}.{proj}")
         else:
-            # router (bf16 gate + fp32 selection bias -> bf16) and shared expert.
+            # router (bf16 gate + fp32 selection bias) and shared expert.
             yield f"{m}.gate.weight", reader.get(f"{m}.gate.weight")
             yield (
                 f"{m}.e_score_correction_bias",
-                reader.get(f"{m}.gate.e_score_correction_bias").to(torch.bfloat16),
+                reader.get(f"{m}.gate.e_score_correction_bias").to(torch.float32),
             )
             s = f"{m}.shared_experts"
             for proj in ("gate_proj", "up_proj", "down_proj"):

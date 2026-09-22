@@ -32,10 +32,8 @@ class Glm4MoeSparseBlock(BaseOP):
         self.topk_group = config.topk_group
 
         self.gate = LinearReplicated(config.hidden_size, config.num_experts, has_bias=False)
-        # DeepSeek-style selection bias; a registered buffer in HF (kept fp32 there). We
-        # store it in the model's bf16 dtype and upcast at use, which is exact enough for
-        # the argmax-style top-k selection.
-        self.e_score_correction_bias = torch.empty(config.num_experts)
+        # Keep selection bias in fp32: rounding can change the selected experts.
+        self.e_score_correction_bias = torch.empty(config.num_experts, dtype=torch.float32)
 
         # The offload cache indexes experts by *MoE* layer (global layer minus
         # first_k_dense_replace), matching how the loader packs the expert banks. The
@@ -82,8 +80,10 @@ class Glm4MoeSparseBlock(BaseOP):
         num_tokens, hidden_dim = hidden_states.shape
         hidden_states = hidden_states.view(-1, hidden_dim)
         topk_weights, topk_ids = self._route(hidden_states)
+        # Routed kernels may overwrite hidden_states; shared experts need the original input.
+        shared = self.shared_experts.forward(hidden_states)
         out = self.experts.routed_forward(hidden_states, topk_weights, topk_ids)
-        out = out + self.shared_experts.forward(hidden_states)
+        out = out + shared
         return out.view(num_tokens, hidden_dim)
 
 
