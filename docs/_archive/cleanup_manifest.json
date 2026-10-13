@@ -1,0 +1,336 @@
+{
+  "archive": "docs/_archive/documentation_before_cleanup_20261012.zip",
+  "archive_sha256": "006953fc1f7e99c56a829504eca479244cdbbdb23c904b6c15f8583c1c845015",
+  "sources": {
+    "Weekly_meetings/FreeToken_Weekly_Progress_08-10-2026_Speaker_Notes_Slides_1-10.md": {
+      "sha256": "992b8fa4a2a764c30f62703598a52780a7efdfcf94a24beeae54c1f183178ad7",
+      "bytes": 18016,
+      "title": "Speaker notes: FreeToken weekly progress, 8 October 2026",
+      "archived_as": "Weekly_meetings/FreeToken_Weekly_Progress_08-10-2026_Speaker_Notes_Slides_1-10.md",
+      "replacement": "docs/presentations/speaker_notes_20261008_slides_1-10.md",
+      "disposition": "moved"
+    },
+    "Weekly_meetings/pruning_20261008_assets/README.md": {
+      "sha256": "f2046bf0008a54175199da35dbc7fd16eb96bbc3757d000bf0983ff40aa8f6bb",
+      "bytes": 1707,
+      "title": "Static pruning slides - 8 October 2026",
+      "archived_as": "Weekly_meetings/pruning_20261008_assets/README.md",
+      "replacement": "docs/presentations/pruning_20261008_assets/README.md",
+      "disposition": "moved"
+    },
+    "docs/ExperimentHandoff.md": {
+      "sha256": "c3750f1e7a7266b2e503bd45b6f1c599dd1a5ecf6262b5be60b9bba0c1921f3b",
+      "bytes": 5316,
+      "title": "Bandwidth study handoff - 2026-09-30",
+      "archived_as": "docs/ExperimentHandoff.md",
+      "replacement": "docs/experiments/bandwidth/reproduction.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/ExperimentReport.md": {
+      "sha256": "73fce8a884a017bb0d3f7b1739638e3cafc11c36c3e153c8a7b831ad1cef8f2f",
+      "bytes": 28376,
+      "title": "FreeToken Qwen / GPT-OSS bandwidth study: consolidated experiment report",
+      "archived_as": "docs/ExperimentReport.md",
+      "replacement": "docs/experiments/bandwidth/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/Findings.md": {
+      "sha256": "1b3a78bd93360024dcae75ea2c4fdad37af8cfda59808e38aebe38544ff6f12a",
+      "bytes": 25438,
+      "title": "Qwen vs GPT-OSS bandwidth study: findings",
+      "archived_as": "docs/Findings.md",
+      "replacement": "docs/experiments/bandwidth/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/MoEPruning75Completion.md": {
+      "sha256": "15acb0ebacac37d0d00ef1f0b26973f6295ee348b9fe87a11f0e84a4483477b7",
+      "bytes": 4257,
+      "title": "Actual 75% retention study completion",
+      "archived_as": "docs/MoEPruning75Completion.md",
+      "replacement": "docs/experiments/pruning/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/MoEPruningActualInferencePlan.md": {
+      "sha256": "6ef6163477c1c45f2b3d1dc78eb5d482e8fac997c03ca3de19bf076f8d24173c",
+      "bytes": 11861,
+      "title": "Native Gemma rerouting and actual 75% inference supplement",
+      "archived_as": "docs/MoEPruningActualInferencePlan.md",
+      "replacement": "docs/experiments/pruning/protocol.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/MoEPruningExecutionLog.md": {
+      "sha256": "0cbd58f76b045a42134d6c35de6389188a173fb05a37ecdf14c753efcce4dc45",
+      "bytes": 52131,
+      "title": "MoE pruning execution log",
+      "archived_as": "docs/MoEPruningExecutionLog.md",
+      "replacement": "docs/EXPERIMENT_LOG.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/MoEPruningImplementationPlan.md": {
+      "sha256": "3b2e25d04e5fd2aab657b0395969eec80d30215c46a1b26c0fca4ddd7fc42167",
+      "bytes": 68324,
+      "title": "MoE pruning: implementation and experimentation protocol",
+      "archived_as": "docs/MoEPruningImplementationPlan.md",
+      "replacement": "docs/experiments/pruning/protocol.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/QwenPressureMitigation.md": {
+      "sha256": "691045a772fc2ceb8630e660a272970c0ee2b93d9bbc4c4af35bdf5bc12f8c59",
+      "bytes": 7749,
+      "title": "Qwen pressure diagnosis and recovery, 2026-10-08",
+      "archived_as": "docs/QwenPressureMitigation.md",
+      "replacement": "docs/experiments/pruning/resource_recovery.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/Reproduction.md": {
+      "sha256": "fc825c5198df76c2d54cd26aa3a008d84091614656fe3ff07b90fec21c24633e",
+      "bytes": 36548,
+      "title": "Qwen vs GPT-OSS bandwidth study reproduction",
+      "archived_as": "docs/Reproduction.md",
+      "replacement": "docs/experiments/bandwidth/reproduction.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/StudyCompletion.md": {
+      "sha256": "054c9e4b09e11d11d4f76849e9311f785c7282ffd9b72eec009c4e4ef60a4b47",
+      "bytes": 5316,
+      "title": "Bandwidth study closeout",
+      "archived_as": "docs/StudyCompletion.md",
+      "replacement": "docs/experiments/bandwidth/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "docs/cli.md": {
+      "sha256": "796765b210004b0261eedf02474e6d64516b582b1d92b05166eeea00514a5a34",
+      "bytes": 11619,
+      "title": "CLI reference",
+      "archived_as": "docs/cli.md",
+      "replacement": "docs/cli.md",
+      "disposition": "retained_engine_documentation"
+    },
+    "docs/ftw-hotfix.md": {
+      "sha256": "ab5758b7313409abbc1586dc351124671dc3d25b2ed5382dde71cbe1b887969b",
+      "bytes": 4323,
+      "title": "Repairing FTW checkpoints from older builds",
+      "archived_as": "docs/ftw-hotfix.md",
+      "replacement": "docs/ftw-hotfix.md",
+      "disposition": "retained_engine_documentation"
+    },
+    "docs/install.md": {
+      "sha256": "1a853bc5f5ec018808906775538b2b26fb9c5880fe277b97c86715a141445eac",
+      "bytes": 1866,
+      "title": "Install",
+      "archived_as": "docs/install.md",
+      "replacement": "docs/install.md",
+      "disposition": "retained_engine_documentation"
+    },
+    "docs/models.md": {
+      "sha256": "cc7b6c6b12c63ded63c0bfa92b81729c363bf395c4461402c35ccca144840235",
+      "bytes": 6506,
+      "title": "Supported models",
+      "archived_as": "docs/models.md",
+      "replacement": "docs/models.md",
+      "disposition": "retained_engine_documentation"
+    },
+    "docs/quickstart.md": {
+      "sha256": "e6eaf7aacd1b9644370c1ac436350843aad6e65a45a925a3efd96b930b6139d8",
+      "bytes": 1734,
+      "title": "Quick start",
+      "archived_as": "docs/quickstart.md",
+      "replacement": "docs/quickstart.md",
+      "disposition": "retained_engine_documentation"
+    },
+    "four_family_moe_pruning_experiment_plan.md": {
+      "sha256": "d8c00687c1692c0658a27e8db6e1d4ce4a3b6faf8c9cccff326a3721ce49013f",
+      "bytes": 15372,
+      "title": "Four-family MoE expert retention study",
+      "archived_as": "four_family_moe_pruning_experiment_plan.md",
+      "replacement": "docs/experiments/pruning/protocol.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "freetoken_qwen_gptoss_bandwidth_experimental_plan.md": {
+      "sha256": "61df06454dd6fefabb3821a9cb3be7519708af7cccf6c0defebd3328e3d4b81c",
+      "bytes": 29825,
+      "title": "Experimental Plan: Explaining the Qwen vs GPT-OSS Bandwidth and MoE-Geometry Difference",
+      "archived_as": "freetoken_qwen_gptoss_bandwidth_experimental_plan.md",
+      "replacement": "docs/PLAN.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "kushal_exps/FINDINGS.md": {
+      "sha256": "4e73a5329f0e70ae63905dea2d4ff43b6e52863cc781795d0a3faa253ede179d",
+      "bytes": 5239,
+      "title": "Experiment 1 \u2014 Prefill MoE-prefetch overlap ON vs OFF (gpt-oss-20b, RTX 4070)",
+      "archived_as": "kushal_exps/FINDINGS.md",
+      "replacement": "docs/experiments/prefill_overlap/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "kushal_exps/README.md": {
+      "sha256": "f1a67b813297b4182d0b57195d9ca119ddde54dc39173852b5e13d6e029638ca",
+      "bytes": 1293,
+      "title": "Experiment 1: Prefill MoE-prefetch overlap ON vs OFF (kushal_exps)",
+      "archived_as": "kushal_exps/README.md",
+      "replacement": "docs/experiments/prefill_overlap/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/FINDINGS.md": {
+      "sha256": "a96b13541f8d1f302c937288af7c4d43ad38aaa3458e75fee9e04ede049da125",
+      "bytes": 8591,
+      "title": "Findings: FreeToken q\\* CPU/GPU-split policy vs fixed splits (gpt-oss-20b, RTX 4070)",
+      "archived_as": "saketh_exps/FINDINGS.md",
+      "replacement": "docs/experiments/split_policy/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/README.md": {
+      "sha256": "60a8bf3f84a3b0a84b9d2339c03761cd47c2a63f700b6694b6c4020f9b7ea65a",
+      "bytes": 4548,
+      "title": "q\\* CPU/GPU-split experiment (saketh_exps)",
+      "archived_as": "saketh_exps/README.md",
+      "replacement": "docs/experiments/split_policy/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/results/summary/tables.md": {
+      "sha256": "5cca9e85c10bc47b3081681dfeacd4ba9b420303f9934a5ceb7b45e8568c74ab",
+      "bytes": 3619,
+      "title": "q* policy comparison tables",
+      "archived_as": "saketh_exps/results/summary/tables.md",
+      "replacement": "docs/experiments/split_policy/tables.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/runtime_q/CONCLUSION_AND_EXPLANATION.md": {
+      "sha256": "555d497b68f4cf86c87bf95387491c860e4abb1383615689b4d2372c5399a87f",
+      "bytes": 13060,
+      "title": "Conclusion and explanation \u2014 runtime-aware q for FreeToken",
+      "archived_as": "saketh_exps/runtime_q/CONCLUSION_AND_EXPLANATION.md",
+      "replacement": "docs/experiments/runtime_q/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/runtime_q/PROGRESS.md": {
+      "sha256": "7dfff4d76f50aacb6dd16900b95850e556353cba70e86fa77e7a63024c880218",
+      "bytes": 6428,
+      "title": "Progress log \u2014 runtime-aware q study",
+      "archived_as": "saketh_exps/runtime_q/PROGRESS.md",
+      "replacement": "docs/EXPERIMENT_LOG.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/runtime_q/README.md": {
+      "sha256": "36a2eab3406323b5abf3f8bf721dab11cf73f4a964ae0be2faaf59c07cad5424",
+      "bytes": 7154,
+      "title": "runtime_q \u2014 runtime-aware selection of FreeToken's CPU/GPU expert split",
+      "archived_as": "saketh_exps/runtime_q/README.md",
+      "replacement": "docs/experiments/runtime_q/reproduction.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/runtime_q/reports/feature_inventory.md": {
+      "sha256": "77b42aea8e401e7ae9485636f980589b993ba00eb7094738ceb649173e969745",
+      "bytes": 13267,
+      "title": "Runtime feature inventory",
+      "archived_as": "saketh_exps/runtime_q/reports/feature_inventory.md",
+      "replacement": "docs/experiments/runtime_q/features.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "saketh_exps/runtime_q/reports/tables.md": {
+      "sha256": "9b9310069954868834a21dd0e4ffcefe775ffff70b7e481e832b060f3e0de83f",
+      "bytes": 13106,
+      "title": "Runtime-aware q: result tables",
+      "archived_as": "saketh_exps/runtime_q/reports/tables.md",
+      "replacement": "docs/experiments/runtime_q/tables.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "yeshwanth_exps/FINDINGS.md": {
+      "sha256": "d8917f083c9d39df4f5148902ef6bf87f4ea7573df39bd730e128b32943d685b",
+      "bytes": 5142,
+      "title": "Experiment 2 \u2014 Routing locality and LRU: original vs shuffled order (gpt-oss-20b)",
+      "archived_as": "yeshwanth_exps/FINDINGS.md",
+      "replacement": "docs/experiments/routing_locality/report.md",
+      "disposition": "consolidated_and_removed"
+    },
+    "yeshwanth_exps/README.md": {
+      "sha256": "5e541a62ae057dd9c36f325b11305db3285ad9493c895258a7ce303aaa67ff2e",
+      "bytes": 1751,
+      "title": "Experiment 2: Routing locality and LRU (yeshwanth_exps)",
+      "archived_as": "yeshwanth_exps/README.md",
+      "replacement": "docs/experiments/routing_locality/report.md",
+      "disposition": "consolidated_and_removed"
+    }
+  },
+  "protected_user_changes": {
+    "benchmarks/bench_decode_moe.py": "ae8cb1bee51f282f70801f054f79872753531a8306c71ad883dc91606b1c0a8c",
+    "python/freetoken/engine/engine.py": "74da8254009edf1bcaf7f7025bc30c3f21bb9992aecc7fb3937d6e7aff7374c9",
+    "python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp": "7e5f1c0305adf7f3c63b3f80e8f3d712a1d48aa84c3c0b19e0e8b582cc3ae6ad",
+    "python/freetoken/layers/moe.py": "0e5bfee9f471af95c93b61e6ecda8611bce313c4637dc40799a7f754c28c6096",
+    "python/freetoken/models/gpt_oss/moe.py": "c4b254d886a7bf2becc6aa76caadbffb5a8ff2e0dfbf226520593cd701819946",
+    "python/freetoken/moe/offload_cache.py": "fd859f730b8659dd795d26ca1a415be925b73b26d1331b326c0b93dd805a88e5"
+  },
+  "frozen_manifest_hashes": {
+    "results/moe_pruning/study_20261006_v1/closeout75/artifact_manifest.json": "967c23a59581d36eedc64cd2f1f7eb82f053e41190dd66d92ad640b82b6a1aba",
+    "results/moe_pruning/study_20261006_v1/additional/actual_masking75_v6/closeout75_actual/artifact_manifest.json": "7af5bd1fa883cede21cd4a41ec6998b0ff291335206e51dc48f2bd5e209df0b6"
+  },
+  "cleanup_date": "2026-10-12",
+  "canonical_index": "docs/README.md",
+  "canonical_log": "docs/EXPERIMENT_LOG.md",
+  "canonical_plan": "docs/PLAN.md",
+  "moves": {
+    "Weekly_meetings/": "docs/presentations/",
+    "2608.16157v1.pdf": "docs/references/2608.16157v1.pdf",
+    "*.pptx": "docs/presentations/",
+    "colleague *.zip": "archives/imports/",
+    "cuda-keyring_1.1-1_all.deb": "archives/installers/cuda-keyring_1.1-1_all.deb"
+  },
+  "validation": "complete",
+  "review": {
+    "recovery_entries_verified": 31,
+    "local_links_resolved": 113,
+    "canonical_log": "docs/EXPERIMENT_LOG.md",
+    "singular_log_confirmed": true,
+    "superseded_working_markdown_removed": 24,
+    "moved_markdown": 2,
+    "unchanged_numerical_table_sets": 3,
+    "protected_user_changes_unchanged": true,
+    "frozen_manifest_bytes_unchanged": true,
+    "syntax_reviewed_document_generators": 8,
+    "experiments_launched": false,
+    "test_suites_run": false,
+    "limitations": "Review covers documentation references, byte identities and source syntax. Numerical workers and generator reruns were not executed."
+  },
+  "canonical_markdown_sha256": {
+    "docs/EXPERIMENT_LOG.md": "b392a32554c90ffd04434f8fec9946e5b96717c791b8ed6ec493cfe53d9d22a2",
+    "docs/PLAN.md": "5c78c4462719ee44601cfbb5c17d91c577c2b6a60434a703eed11fb85be2b128",
+    "docs/README.md": "5c32e63b473e7b617de8973b1730fbd74f180fed0cd1c4e67317255e11305587",
+    "docs/cli.md": "796765b210004b0261eedf02474e6d64516b582b1d92b05166eeea00514a5a34",
+    "docs/experiments/bandwidth/report.md": "81214085fb0a6fd0ba7a5502ab3b9fdc003eb88f0330636643a1422c392dbc05",
+    "docs/experiments/bandwidth/reproduction.md": "3dbe5d27a9744d6961b1401d19e0242e6d7d6c720724070a0df77cf19fb19b7c",
+    "docs/experiments/prefill_overlap/report.md": "87f04a054fa2f785eea9ccf775a4144e9e7190b724daf6ccb47a6df4311049fc",
+    "docs/experiments/pruning/dataset.md": "95e2da099da10ec76df59530cd5fe76b95453371ebe22d7788207f0cda1e317e",
+    "docs/experiments/pruning/protocol.md": "83f079d0fa268159d614d55e4d8d6011f6a8e634008ba552b2b6b1f78708c3e1",
+    "docs/experiments/pruning/report.md": "6a7a73a6c088b9bd409e7ac54f4ed970ae7894378810d3b322b3ec8468fc3eba",
+    "docs/experiments/pruning/resource_recovery.md": "a7295d776b842cd75f83e8642155657f605846e1cbbd5e1d4f9feffdd82b3c0d",
+    "docs/experiments/routing_locality/report.md": "ec3da16c52e6585e71a29133e5f5ae7bb9b8421b862a6b4053323c7b74f1a578",
+    "docs/experiments/runtime_q/features.md": "06b354f00514228787cac0c2724a92b12f3406c060f055743cacf9efaa086a15",
+    "docs/experiments/runtime_q/report.md": "cb311ed43883de6ccd89db871d791754f1f17e1de3fa192dbc299acd03000ee6",
+    "docs/experiments/runtime_q/reproduction.md": "a736e13a45ad324049e55d2c5246efe38a027a45ff7a6fb85e7c9fedb96f06cc",
+    "docs/experiments/runtime_q/tables.md": "169df6092ee320246bbc45505fcc44349e9f61abefb4d31e859b18542ca493fc",
+    "docs/experiments/split_policy/report.md": "32c36792036925be1963c10b4428656c255bbc316af63fbbcc8f770f34b077c4",
+    "docs/experiments/split_policy/tables.md": "9e23fe75456648b6084600847cffe6b101afc0f586ca9baaf5d3367e4d1ef2ec",
+    "docs/ftw-hotfix.md": "ab5758b7313409abbc1586dc351124671dc3d25b2ed5382dde71cbe1b887969b",
+    "docs/install.md": "1a853bc5f5ec018808906775538b2b26fb9c5880fe277b97c86715a141445eac",
+    "docs/models.md": "cc7b6c6b12c63ded63c0bfa92b81729c363bf395c4461402c35ccca144840235",
+    "docs/presentations/pruning_20261008_assets/README.md": "65420e5ebbbe45c58811626201f894c6691bcd9031253a631ce49f066b3da754",
+    "docs/presentations/speaker_notes_20261008_slides_1-10.md": "faad41d14bc6dee3a6efed66bd5fe55ca72da0b2ab9642c2e12d1ecb200c50b5",
+    "docs/quickstart.md": "e6eaf7aacd1b9644370c1ac436350843aad6e65a45a925a3efd96b930b6139d8"
+  },
+  "document_generator_sha256": {
+    "experiments/moe_pruning.py": "65ee0571f2daccb102f5ad34cf9157815347f0c1dacc3b4c769a2f7c13e7ac06",
+    "experiments/export_pruning_supplement.py": "18b267551ec0f370551bc6cce0dec07990e6d58fefe8e81be4725468f329e0df",
+    "saketh_exps/runner/report.py": "2c98529df2d7eae38d3cba4f1cbccf7990b3843ca3becb17babb6cac71949813",
+    "saketh_exps/runtime_q/scripts/analyze_eval.py": "6ea193a3e63c30e5bd26592a98616c6a23ac023986c2483334d335464056c4dd",
+    "saketh_exps/runtime_q/scripts/feature_inventory.py": "aae42dcf47911baf1102a2a7ad630f493bac02ca8af8afa59461dbf724e398a3",
+    "saketh_exps/runtime_q/scripts/make_report_pdf.py": "63f7526368f65690e32de8d737e42b0e967dddc482e97fe0e3d3eb65201a45a9",
+    "docs/presentations/pruning_20261008_assets/build_static_pruning_slides.py": "a293f72f6b572b9af77ca2ba4e948ca0b0330e89117f7318cce211c227edc3f0",
+    "docs/presentations/pruning_20261008_assets/preview_slides.py": "03c13df7c00eab04daeb7b460381c30250f2017b46ab09a9c394cd2ce5b97a2c"
+  },
+  "relocated_binary_sha256": {
+    "archives/imports/yeshwanth_exps.zip": "13f209426147f6e33a897aebae7cc1d78ec9b4da44975b5aae8d869744580942",
+    "archives/imports/saketh_exps.zip": "9c0fff0df5545a2a1abed6ab592a7e9a4b4c8d06b35f425fd1b1dc59c395d083",
+    "archives/imports/kushal_exps.zip": "e3ae69881a25526b342ec7fa63e1987f21a8bc596eca6d9c737e97c2d7fabc7c",
+    "archives/installers/cuda-keyring_1.1-1_all.deb": "d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba",
+    "docs/references/2608.16157v1.pdf": "65433248a5042260626d3a956bb671850bf666e2a43fb6a58d144aa8533f9e8b"
+  }
+}

@@ -1,0 +1,430 @@
+{
+ "groups": [
+  {
+   "workload": "p1_low",
+   "cache_rate": 0.4,
+   "problem": 1,
+   "repeats": 2,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     }
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    },
+    {
+     "name": "linear_h16",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h16/linear_full.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "p1_med",
+   "cache_rate": 0.2,
+   "problem": 1,
+   "repeats": 2,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     }
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    },
+    {
+     "name": "linear_h16",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h16/linear_full.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "p1_high",
+   "cache_rate": 0.1,
+   "problem": 1,
+   "repeats": 2,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     }
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    },
+    {
+     "name": "linear_h16",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h16/linear_full.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "rate015",
+   "cache_rate": 0.15,
+   "problem": 0,
+   "repeats": 2,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     }
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    },
+    {
+     "name": "linear_h16",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h16/linear_full.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "rate030",
+   "cache_rate": 0.3,
+   "problem": 0,
+   "repeats": 2,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     }
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    },
+    {
+     "name": "linear_h16",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h16/linear_full.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "rate060",
+   "cache_rate": 0.6,
+   "problem": 0,
+   "repeats": 2,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     }
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    },
+    {
+     "name": "linear_h16",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h16/linear_full.json"
+     }
+    }
+   ]
+  }
+ ]
+}

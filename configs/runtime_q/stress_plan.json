@@ -1,0 +1,104 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss_cpuhog4",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 2,
+   "burnin": 3,
+   "cpu_hogs": 4,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/eval/stress_rows_med_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "log": "results/eval/stress_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "log": "results/eval/stress_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     },
+     "log": "results/eval/stress_rows_med_miss.csv"
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     },
+     "log": "results/eval/stress_rows_med_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "low_miss_cpuhog4",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 2,
+   "burnin": 3,
+   "cpu_hogs": 4,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/eval/stress_rows_low_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "log": "results/eval/stress_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "log": "results/eval/stress_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     },
+     "log": "results/eval/stress_rows_low_miss.csv"
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     },
+     "log": "results/eval/stress_rows_low_miss.csv"
+    }
+   ]
+  }
+ ]
+}

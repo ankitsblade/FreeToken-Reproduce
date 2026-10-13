@@ -1,0 +1,217 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar_full",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": "full"
+    },
+    {
+     "name": "qstar_lean",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "f25_lean",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "ra_k1_full",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "groups": "full"
+    },
+    {
+     "name": "ra_k1_lean",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ]
+    },
+    {
+     "name": "ra_k1_uniformp_cacheonly",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache"
+     ]
+    }
+   ]
+  },
+  {
+   "workload": "low_miss",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar_full",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": "full"
+    },
+    {
+     "name": "qstar_lean",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "f25_lean",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "ra_k1_full",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "groups": "full"
+    },
+    {
+     "name": "ra_k1_lean",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ]
+    },
+    {
+     "name": "ra_k1_uniformp_cacheonly",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache"
+     ]
+    }
+   ]
+  },
+  {
+   "workload": "high_miss",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar_full",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": "full"
+    },
+    {
+     "name": "qstar_lean",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "f25_lean",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "ra_k1_full",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "groups": "full"
+    },
+    {
+     "name": "ra_k1_lean",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ]
+    },
+    {
+     "name": "ra_k1_uniformp_cacheonly",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache"
+     ]
+    }
+   ]
+  }
+ ]
+}

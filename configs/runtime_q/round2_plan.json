@@ -1,0 +1,262 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "ra_k1_e10",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 1
+      },
+      "eps": 0.1
+     },
+     "seed": 41,
+     "log": "data/raw/round2_med_miss.csv"
+    },
+    {
+     "name": "ra_k1_e25",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 1
+      },
+      "eps": 0.25
+     },
+     "seed": 42,
+     "log": "data/raw/round2_med_miss.csv"
+    },
+    {
+     "name": "ra_k4_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 4
+      },
+      "eps": 0.15
+     },
+     "seed": 43,
+     "log": "data/raw/round2_med_miss.csv"
+    },
+    {
+     "name": "ra_k05_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 0.5
+      },
+      "eps": 0.15
+     },
+     "seed": 44,
+     "log": "data/raw/round2_med_miss.csv"
+    },
+    {
+     "name": "ridge8_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "model",
+       "path": "models/main/ridge_full.json"
+      },
+      "eps": 0.15
+     },
+     "seed": 45,
+     "log": "data/raw/round2_med_miss.csv"
+    },
+    {
+     "name": "ridge32_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "model",
+       "path": "models/main_h32/ridge_full.json"
+      },
+      "eps": 0.15
+     },
+     "seed": 46,
+     "log": "data/raw/round2_med_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "low_miss",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "ra_k1_e10",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 1
+      },
+      "eps": 0.1
+     },
+     "seed": 41,
+     "log": "data/raw/round2_low_miss.csv"
+    },
+    {
+     "name": "ra_k1_e25",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 1
+      },
+      "eps": 0.25
+     },
+     "seed": 42,
+     "log": "data/raw/round2_low_miss.csv"
+    },
+    {
+     "name": "ra_k4_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 4
+      },
+      "eps": 0.15
+     },
+     "seed": 43,
+     "log": "data/raw/round2_low_miss.csv"
+    },
+    {
+     "name": "ra_k05_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 0.5
+      },
+      "eps": 0.15
+     },
+     "seed": 44,
+     "log": "data/raw/round2_low_miss.csv"
+    },
+    {
+     "name": "ridge8_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "model",
+       "path": "models/main/ridge_full.json"
+      },
+      "eps": 0.15
+     },
+     "seed": 45,
+     "log": "data/raw/round2_low_miss.csv"
+    },
+    {
+     "name": "ridge32_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "model",
+       "path": "models/main_h32/ridge_full.json"
+      },
+      "eps": 0.15
+     },
+     "seed": 46,
+     "log": "data/raw/round2_low_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "high_miss",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "ra_k1_e10",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 1
+      },
+      "eps": 0.1
+     },
+     "seed": 41,
+     "log": "data/raw/round2_high_miss.csv"
+    },
+    {
+     "name": "ra_k1_e25",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 1
+      },
+      "eps": 0.25
+     },
+     "seed": 42,
+     "log": "data/raw/round2_high_miss.csv"
+    },
+    {
+     "name": "ra_k4_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 4
+      },
+      "eps": 0.15
+     },
+     "seed": 43,
+     "log": "data/raw/round2_high_miss.csv"
+    },
+    {
+     "name": "ra_k05_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "reuse_aware",
+       "kappa": 0.5
+      },
+      "eps": 0.15
+     },
+     "seed": 44,
+     "log": "data/raw/round2_high_miss.csv"
+    },
+    {
+     "name": "ridge8_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "model",
+       "path": "models/main/ridge_full.json"
+      },
+      "eps": 0.15
+     },
+     "seed": 45,
+     "log": "data/raw/round2_high_miss.csv"
+    },
+    {
+     "name": "ridge32_e15",
+     "spec": {
+      "kind": "eps_wrap",
+      "base": {
+       "kind": "model",
+       "path": "models/main_h32/ridge_full.json"
+      },
+      "eps": 0.15
+     },
+     "seed": 46,
+     "log": "data/raw/round2_high_miss.csv"
+    }
+   ]
+  }
+ ]
+}

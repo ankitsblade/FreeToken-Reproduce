@@ -1,0 +1,48 @@
+{
+  "qwen_nvfp4": {
+    "repository": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+    "revision": "1355db6a052410cfd62085d94b58866fd0f2c3c5",
+    "path": "results/checkpoints/qwen3.6-35b-nvfp4",
+    "layers": 40,
+    "experts": 256,
+    "top_k": 8,
+    "expert_bytes": 1775616,
+    "cache_slots": 2048,
+    "format": "nvfp4",
+    "shared_branch": true,
+    "required": true
+  },
+  "gpt_oss_mxfp4": {
+    "repository": "openai/gpt-oss-20b",
+    "revision": "6cee5e81ee83917806bbde320786a8fb61efebee",
+    "path": "results/checkpoints/gpt-oss-20b",
+    "layers": 24,
+    "experts": 32,
+    "top_k": 4,
+    "expert_bytes": 13236480,
+    "cache_slots": 154,
+    "format": "mxfp4",
+    "shared_branch": false,
+    "required": true
+  },
+  "gemma_nvfp4": {
+    "repository": "nvidia/Gemma-4-26B-A4B-NVFP4",
+    "revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+    "path": "results/checkpoints/gemma4-26b-nvfp4",
+    "layers": 30,
+    "experts": 128,
+    "top_k": 8,
+    "shared_branch": true,
+    "required": false
+  },
+  "kimi_k25": {
+    "repository": "moonshotai/Kimi-K2.5",
+    "revision": "4d01dfe0332d63057c186e0b262165819efb6611",
+    "layers": 60,
+    "experts": 384,
+    "top_k": 8,
+    "shared_branch": true,
+    "required": false,
+    "status": "blocked_loader"
+  }
+}

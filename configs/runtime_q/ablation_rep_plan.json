@@ -1,0 +1,637 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "chain:ridge_00_base",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_00_base.json"
+     }
+    },
+    {
+     "name": "chain:ridge_01_plus_Routing",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_01_plus_Routing.json"
+     }
+    },
+    {
+     "name": "chain:ridge_02_plus_CPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_02_plus_CPU.json"
+     }
+    },
+    {
+     "name": "chain:ridge_03_plus_GPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_03_plus_GPU.json"
+     }
+    },
+    {
+     "name": "chain:ridge_04_plus_Transfer",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_04_plus_Transfer.json"
+     }
+    },
+    {
+     "name": "chain:ridge_05_plus_Overlap",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_05_plus_Overlap.json"
+     }
+    },
+    {
+     "name": "chain:ridge_06_plus_Cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_06_plus_Cache.json"
+     }
+    },
+    {
+     "name": "chain:ridge_07_plus_Reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_07_plus_Reuse.json"
+     }
+    },
+    {
+     "name": "chain:ridge_08_plus_Utilization",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_08_plus_Utilization.json"
+     }
+    },
+    {
+     "name": "chain:ridge_09_plus_Memory",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_09_plus_Memory.json"
+     }
+    },
+    {
+     "name": "chain:ridge_10_plus_History",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_10_plus_History.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_CPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_CPU.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Cache.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_GPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_GPU.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_History",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_History.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Memory",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Memory.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Overlap",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Overlap.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Reuse.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Routing",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Routing.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Transfer",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Transfer.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Utilization",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Utilization.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C1_none",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C1_none.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C2_occupancy",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C2_occupancy.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C3_occ_hitmiss",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C3_occ_hitmiss.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C4_occ_hitmiss_reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C4_occ_hitmiss_reuse.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C5_full_cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C5_full_cache.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "low_miss",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "chain:ridge_00_base",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_00_base.json"
+     }
+    },
+    {
+     "name": "chain:ridge_01_plus_Routing",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_01_plus_Routing.json"
+     }
+    },
+    {
+     "name": "chain:ridge_02_plus_CPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_02_plus_CPU.json"
+     }
+    },
+    {
+     "name": "chain:ridge_03_plus_GPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_03_plus_GPU.json"
+     }
+    },
+    {
+     "name": "chain:ridge_04_plus_Transfer",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_04_plus_Transfer.json"
+     }
+    },
+    {
+     "name": "chain:ridge_05_plus_Overlap",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_05_plus_Overlap.json"
+     }
+    },
+    {
+     "name": "chain:ridge_06_plus_Cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_06_plus_Cache.json"
+     }
+    },
+    {
+     "name": "chain:ridge_07_plus_Reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_07_plus_Reuse.json"
+     }
+    },
+    {
+     "name": "chain:ridge_08_plus_Utilization",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_08_plus_Utilization.json"
+     }
+    },
+    {
+     "name": "chain:ridge_09_plus_Memory",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_09_plus_Memory.json"
+     }
+    },
+    {
+     "name": "chain:ridge_10_plus_History",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_10_plus_History.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_CPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_CPU.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Cache.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_GPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_GPU.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_History",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_History.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Memory",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Memory.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Overlap",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Overlap.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Reuse.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Routing",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Routing.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Transfer",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Transfer.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Utilization",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Utilization.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C1_none",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C1_none.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C2_occupancy",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C2_occupancy.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C3_occ_hitmiss",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C3_occ_hitmiss.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C4_occ_hitmiss_reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C4_occ_hitmiss_reuse.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C5_full_cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C5_full_cache.json"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "high_miss",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "chain:ridge_00_base",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_00_base.json"
+     }
+    },
+    {
+     "name": "chain:ridge_01_plus_Routing",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_01_plus_Routing.json"
+     }
+    },
+    {
+     "name": "chain:ridge_02_plus_CPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_02_plus_CPU.json"
+     }
+    },
+    {
+     "name": "chain:ridge_03_plus_GPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_03_plus_GPU.json"
+     }
+    },
+    {
+     "name": "chain:ridge_04_plus_Transfer",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_04_plus_Transfer.json"
+     }
+    },
+    {
+     "name": "chain:ridge_05_plus_Overlap",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_05_plus_Overlap.json"
+     }
+    },
+    {
+     "name": "chain:ridge_06_plus_Cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_06_plus_Cache.json"
+     }
+    },
+    {
+     "name": "chain:ridge_07_plus_Reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_07_plus_Reuse.json"
+     }
+    },
+    {
+     "name": "chain:ridge_08_plus_Utilization",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_08_plus_Utilization.json"
+     }
+    },
+    {
+     "name": "chain:ridge_09_plus_Memory",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_09_plus_Memory.json"
+     }
+    },
+    {
+     "name": "chain:ridge_10_plus_History",
+     "spec": {
+      "kind": "model",
+      "path": "models/chain_ridge/ridge_10_plus_History.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_CPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_CPU.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Cache.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_GPU",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_GPU.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_History",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_History.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Memory",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Memory.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Overlap",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Overlap.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Reuse.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Routing",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Routing.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Transfer",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Transfer.json"
+     }
+    },
+    {
+     "name": "logo:ridge_minus_Utilization",
+     "spec": {
+      "kind": "model",
+      "path": "models/logo_ridge/ridge_minus_Utilization.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C1_none",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C1_none.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C2_occupancy",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C2_occupancy.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C3_occ_hitmiss",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C3_occ_hitmiss.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C4_occ_hitmiss_reuse",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C4_occ_hitmiss_reuse.json"
+     }
+    },
+    {
+     "name": "cache:ridge_C5_full_cache",
+     "spec": {
+      "kind": "model",
+      "path": "models/cache_ridge/ridge_C5_full_cache.json"
+     }
+    }
+   ]
+  }
+ ]
+}

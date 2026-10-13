@@ -1,0 +1,48 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss_decode384",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 2,
+   "burnin": 2,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     }
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     }
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     }
+    },
+    {
+     "name": "ra_k1_online",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "rho_online": true
+     }
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_r2_h8/ridge_full.json"
+     }
+    }
+   ]
+  }
+ ]
+}

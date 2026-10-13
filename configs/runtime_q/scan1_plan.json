@@ -1,0 +1,598 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "t0111",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       1,
+       1,
+       1
+      ]
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k05",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 0.5
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k2",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 2
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k4",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 4
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k1_tf64",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "t_free": 64
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k1_uniformp",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "per_expert": false
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ra_k1_nocache",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "use_cache": false
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "linear_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/linear_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ridge_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/ridge_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "tree_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/tree_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "gbm_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/gbm_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "mlp_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/mlp_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main/ridge_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    },
+    {
+     "name": "gbm_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main/gbm_full.json"
+     },
+     "log": "results/eval/scan1_rows_med_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "low_miss",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "t0111",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       1,
+       1,
+       1
+      ]
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k05",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 0.5
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k2",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 2
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k4",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 4
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k1_tf64",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "t_free": 64
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k1_uniformp",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "per_expert": false
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ra_k1_nocache",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "use_cache": false
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "linear_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/linear_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ridge_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/ridge_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "tree_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/tree_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "gbm_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/gbm_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "mlp_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/mlp_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main/ridge_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    },
+    {
+     "name": "gbm_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main/gbm_full.json"
+     },
+     "log": "results/eval/scan1_rows_low_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "high_miss",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "qstar",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "t0011",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ]
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "t0111",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       1,
+       1,
+       1
+      ]
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k1",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k05",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 0.5
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k2",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 2
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k4",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 4
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k1_tf64",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "t_free": 64
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k1_uniformp",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "per_expert": false
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ra_k1_nocache",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1,
+      "use_cache": false
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "linear_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/linear_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ridge_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/ridge_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "tree_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/tree_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "gbm_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/gbm_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "mlp_h32",
+     "spec": {
+      "kind": "model",
+      "path": "models/main_h32/mlp_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "ridge_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main/ridge_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    },
+    {
+     "name": "gbm_h8",
+     "spec": {
+      "kind": "model",
+      "path": "models/main/gbm_full.json"
+     },
+     "log": "results/eval/scan1_rows_high_miss.csv"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,929 @@
+diff --git a/python/freetoken/engine/engine.py b/python/freetoken/engine/engine.py
+index cc14cf5..655cc8b 100644
+--- a/python/freetoken/engine/engine.py
++++ b/python/freetoken/engine/engine.py
+@@ -752,6 +752,17 @@ class Engine:
+         """
+         if config.moe_hybrid_max_fetch >= 0:
+             return  # explicit fixed cap
++        # Experiment hook (saketh_exps): force a fixed fetch fraction instead of the
++        # benched q* so the fixed-q baselines reuse the exact hybrid_fetch_fraction path.
++        forced = os.getenv("FREETOKEN_MOE_FORCE_FETCH_FRACTION")
++        if forced is not None:
++            cache.hybrid_max_fetch = cache.num_experts  # inert: the fraction is the cap
++            cache.hybrid_fetch_fraction = float(forced)
++            logger.info_rank0(
++                f"FREETOKEN_MOE_FORCE_FETCH_FRACTION: forcing q = {float(forced):.0%} of "
++                "each decode step's expert misses over PCIe"
++            )
++            return
+         from freetoken.moe.bench_profile import load_hybrid_fetch_fraction
+ 
+         gpu_name, gpu_uuid = _profile_gpu(self.device.index)
+@@ -1019,6 +1030,12 @@ class Engine:
+ 
+     def forward_batch(self, batch: Batch, args: BatchSamplingArgs) -> ForwardOutput:
+         assert torch.cuda.current_stream() == self.stream
++        route_observer = None
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observer
++
++            route_observer = observer()
++            route_observer.begin_batch(batch, self.moe_offload_cache)
+         if batch.mm_gather_plan:
+             self._run_mm_encoder(batch)
+         use_graph = self.graph_runner.can_use_cuda_graph(batch)
+@@ -1034,6 +1051,8 @@ class Engine:
+ 
+         batch_logits = logits[: batch.size]
+         next_tokens_gpu = self.sampler.sample(batch_logits, args).to(torch.int32)
++        if route_observer is not None:
++            route_observer.end_batch(next_tokens_gpu)
+         next_tokens_cpu = next_tokens_gpu.to("cpu", non_blocking=True)
+         copy_done_event = torch.cuda.Event()
+         copy_done_event.record(self.stream)
+diff --git a/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp b/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
+index 8349123..bb76def 100644
+--- a/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
++++ b/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
+@@ -1084,8 +1084,16 @@ struct MoeTask {
+   const int32_t* ids;  // [num_tokens, top_k]  (raw expert ids; <0 = skip)
+   const float* w;      // [num_tokens, top_k]
+   bf16_t* y;           // [num_tokens, H]
++  bool timing_enabled = false;
++  std::atomic<int64_t> start_ns{0};
++  std::atomic<int64_t> end_ns{0};
+ };
+ 
++int64_t task_clock_ns() {
++  return std::chrono::duration_cast<std::chrono::nanoseconds>(
++      std::chrono::steady_clock::now().time_since_epoch()).count();
++}
++
+ // Output-row tiling. Small enough to give every worker independent work even at
+ // batch size 1; large enough to amortize the atomic work-grab.
+ //
+@@ -1880,6 +1888,8 @@ struct CpuMoeExecutor {
+       }
+       run_task_body(t);
+       if (done_count.fetch_add(1) + 1 == num_threads) {
++        if (t->timing_enabled)
++          t->end_ns.store(task_clock_ns(), std::memory_order_release);
+         completed.store(my_gen, std::memory_order_release);
+         {
+           std::lock_guard<std::mutex> lk(sync_mtx);
+@@ -1890,6 +1900,10 @@ struct CpuMoeExecutor {
+   }
+ 
+   void submit(MoeTask* t) {
++    if (t->timing_enabled) {
++      t->end_ns.store(0, std::memory_order_relaxed);
++      t->start_ns.store(task_clock_ns(), std::memory_order_relaxed);
++    }
+     n_iblk = (I + IBLK - 1) / IBLK;
+     n_hblk = (H + HBLK - 1) / HBLK;
+     // Grow the per-token intermediate scratch if a larger batch shows up than the
+@@ -2135,6 +2149,20 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+            py::arg("stream"), py::arg("task"), py::call_guard<py::gil_scoped_release>())
+       .def("run_task", &CpuMoeExecutor::run_task, py::arg("task"),
+            py::call_guard<py::gil_scoped_release>())
++      .def("set_task_timing", [](CpuMoeExecutor&, uintptr_t task, bool enabled) {
++        auto* t = reinterpret_cast<MoeTask*>(task);
++        t->timing_enabled = enabled;
++        t->start_ns.store(0, std::memory_order_relaxed);
++        t->end_ns.store(0, std::memory_order_relaxed);
++      }, py::arg("task"), py::arg("enabled"))
++      .def("task_timing_ms", [](CpuMoeExecutor&, uintptr_t task) {
++        auto* t = reinterpret_cast<MoeTask*>(task);
++        const int64_t end = t->end_ns.load(std::memory_order_acquire);
++        const int64_t start = t->start_ns.load(std::memory_order_relaxed);
++        if (!t->timing_enabled || start == 0 || end < start)
++          throw std::runtime_error("task timing requires an enabled, completed task");
++        return (end - start) / 1e6;
++      }, py::arg("task"))
+       .def("register_flag_task", &CpuMoeExecutor::register_flag_task,
+            py::arg("slot"), py::arg("task"))
+       .def("flag_served_count", &CpuMoeExecutor::flag_served_count, py::arg("slot"))
+diff --git a/python/freetoken/layers/moe.py b/python/freetoken/layers/moe.py
+index c209454..f7f2ca3 100644
+--- a/python/freetoken/layers/moe.py
++++ b/python/freetoken/layers/moe.py
+@@ -229,6 +229,10 @@ class OffloadMoELayer(MoELayer):
+         hidden_states: torch.Tensor,
+         router_logits: torch.Tensor | None = None,
+     ):
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observe_scores
++
++            observe_scores(self.layer_id, router_logits)
+         topk_weights, topk_ids = fused_topk(
+             hidden_states=hidden_states,
+             gating_output=router_logits,
+@@ -242,6 +246,10 @@ class OffloadMoELayer(MoELayer):
+         hidden_states: torch.Tensor,
+         router_logits: torch.Tensor | None = None,
+     ):
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observe_scores
++
++            observe_scores(self.layer_id, router_logits)
+         topk_weights, topk_ids = fused_topk(
+             hidden_states=hidden_states,
+             gating_output=router_logits,
+@@ -276,6 +284,10 @@ class OffloadMoELayer(MoELayer):
+         ids), so no ``ensure_experts``/``copy_missing`` here."""
+         cache = self.offload_cache
+         assert cache is not None
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observe_routes
++
++            observe_routes(self, topk_weights, topk_ids, cache)
+         if cache.is_cpu_layer(self.layer_id):
+             executor = cache.cpu_executor
+             assert executor is not None, "CPU MoE executor was not initialized"
+@@ -313,6 +325,12 @@ class OffloadMoELayer(MoELayer):
+         """
+         executor = cache.cpu_executor
+         assert executor is not None, "CPU MoE executor was not initialized"
++        if os.getenv("FREETOKEN_MOE_LAYER_REPLAY_OUT"):
++            from freetoken.moe.layer_replay import maybe_run
++
++            maybe_run(self, cache, hidden_states, topk_weights, topk_ids)
++        if cache.decode_trace is not None:
++            cache.decode_trace.start_layer()
+         raw = topk_ids.clone()  # raw expert ids for the CPU partial
+         cache.ensure_experts_hybrid(self.layer_id, topk_ids)  # -> slot (hit/fetched) or -1
+         if cache.collect_stats:
+@@ -328,9 +346,16 @@ class OffloadMoELayer(MoELayer):
+             executor.decode_sync(pending) if not _HYBRID_OVERLAP else None
+         )
+ 
++        replay_events = getattr(cache, "_layer_replay_events", None)
++        if replay_events is not None:
++            replay_events["pcie_start"].record()
+         cache.copy_missing()
++        if replay_events is not None:
++            replay_events["pcie_end"].record()
+         gpu_slots = topk_ids.clamp_min(0)  # -1 -> slot 0 (zero-weighted below)
+         gpu_w = torch.where(on_gpu, topk_weights, topk_weights.new_zeros(())).contiguous()
++        if replay_events is not None:
++            replay_events["gpu_start"].record()
+         gpu_routed = self._expert_gemm(
+             cache,
+             hidden_states,
+@@ -341,8 +366,17 @@ class OffloadMoELayer(MoELayer):
+             alphas=cache.alphas_for_slots(self.layer_id),
+             is_prefill=False,
+         )
++        if replay_events is not None:
++            replay_events["gpu_end"].record()
+         cpu_routed = cpu_routed_early if not _HYBRID_OVERLAP else executor.decode_sync(pending)
+-        return gpu_routed + cpu_routed
++        result = gpu_routed + cpu_routed
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observer
++
++            observer().finish_cache(cache)
++        if cache.decode_trace is not None:
++            cache.decode_trace.finish_layer()
++        return result
+ 
+     def _prefill_routed(
+         self,
+@@ -356,6 +390,10 @@ class OffloadMoELayer(MoELayer):
+         pass through unmapped."""
+         cache = self.offload_cache
+         assert cache is not None
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observe_routes
++
++            observe_routes(self, topk_weights, topk_ids, cache)
+         if cache.prefill_overlap:
+             views = self._wait_prefill_overlap(cache)
+             out = self._expert_gemm(
+diff --git a/python/freetoken/models/gpt_oss/moe.py b/python/freetoken/models/gpt_oss/moe.py
+index 3b58946..d343513 100644
+--- a/python/freetoken/models/gpt_oss/moe.py
++++ b/python/freetoken/models/gpt_oss/moe.py
+@@ -2,6 +2,7 @@ from __future__ import annotations
+ 
+ from typing import TYPE_CHECKING
+ 
++import os
+ import torch
+ from freetoken.layers import BaseOP, LinearReplicated, MoELayer, OffloadMoELayer, make_moe_layer
+ from freetoken.utils import nvtx_annotate
+@@ -30,6 +31,10 @@ class GptOssOffloadMoELayer(OffloadMoELayer):
+ 
+     def forward(self, hidden_states: torch.Tensor, router_logits: torch.Tensor | None = None):
+         assert router_logits is not None
++        if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
++            from freetoken.moe.routing_trace import observe_scores
++
++            observe_scores(self.layer_id, router_logits)
+         topk_weights, topk_ids = _route(router_logits, self.top_k)
+         return self.routed_forward(hidden_states, topk_weights, topk_ids)
+ 
+diff --git a/python/freetoken/moe/offload_cache.py b/python/freetoken/moe/offload_cache.py
+index 7abb9c8..f3fa1f0 100644
+--- a/python/freetoken/moe/offload_cache.py
++++ b/python/freetoken/moe/offload_cache.py
+@@ -246,6 +246,23 @@ class OffloadMoeCache:
+         # kernel rewrites them to slots. Only accurate with CUDA graphs disabled (the
+         # captured graph would not re-run this host-side scatter on replay).
+         self.collect_decode_freq = False
++        trace_path = os.getenv("FREETOKEN_MOE_DECODE_TRACE_CSV")
++        if trace_path:
++            from freetoken.moe.decode_trace import DecodeTrace
++
++            self.decode_trace = DecodeTrace(trace_path, self)
++        else:
++            self.decode_trace = None
++        # Experiment hook (saketh_exps/runtime_q): a host-side q policy + feature logger
++        # that duck-types DecodeTrace. Inactive unless the env var names a module file.
++        runtime_q_module = os.getenv("FREETOKEN_MOE_RUNTIME_Q_MODULE")
++        if runtime_q_module:
++            import importlib.util
++
++            spec = importlib.util.spec_from_file_location("freetoken_runtime_q", runtime_q_module)
++            module = importlib.util.module_from_spec(spec)
++            spec.loader.exec_module(module)
++            self.decode_trace = module.build(self)
+         self.decode_freq = torch.zeros(
+             (self.num_layers, self.num_experts), dtype=torch.int64, device=self.device
+         )
+@@ -843,6 +860,8 @@ class OffloadMoeCache:
+     def ensure_experts(self, layer_id: int, expert_ids: torch.Tensor) -> None:
+         from freetoken.moe.offload_kernels import ensure_experts
+ 
++        if self.decode_trace is not None:
++            self.decode_trace.begin(layer_id, expert_ids)
+         if self.collect_decode_freq:
+             # ``expert_ids`` still holds raw expert ids here (the kernel rewrites them to
+             # slot ids in place), so snapshot the routing histogram before that happens.
+@@ -864,6 +883,8 @@ class OffloadMoeCache:
+         miss count (for stats). All device-side / fixed-shape, so it is CUDA-graph safe."""
+         from freetoken.moe.offload_kernels import ensure_experts_hybrid
+ 
++        if self.decode_trace is not None:
++            self.decode_trace.begin(layer_id, expert_ids)
+         if self.collect_decode_freq:
+             ids = expert_ids.reshape(-1).long()
+             self.decode_freq[layer_id].scatter_add_(0, ids, torch.ones_like(ids))
+@@ -1039,6 +1060,8 @@ class OffloadMoeCache:
+                 self.src_indices,
+                 self.num_indices,
+             )
++            if self.decode_trace is not None:
++                self.decode_trace.finish()
+             return
+ 
+         from freetoken.kernel import fast_index_copy_jit
+@@ -1051,6 +1074,8 @@ class OffloadMoeCache:
+                 self.src_indices,
+                 self.num_indices,
+             )
++        if self.decode_trace is not None:
++            self.decode_trace.finish()
+ 
+ 
+ def iter_offload_moe_layers(model) -> Iterator:
+diff --git a/python/freetoken/moe/decode_trace.py b/python/freetoken/moe/decode_trace.py
+new file mode 100644
+index 0000000..39588a3
+--- /dev/null
++++ b/python/freetoken/moe/decode_trace.py
+@@ -0,0 +1,155 @@
++"""Opt-in, eager-only MoE decode traffic log for bandwidth experiments."""
++
++from __future__ import annotations
++
++import csv
++import os
++import time
++from datetime import datetime, timezone
++
++import torch
++
++
++FIELDS = (
++    "timestamp", "run_id", "model_id", "request_id", "token_index", "layer_id",
++    "E", "k", "bank_count", "bank_bytes", "expert_size_bytes", "cache_slots", "cache_bytes",
++    "routed_experts", "unique_routed_count", "hit_count", "miss_count", "m",
++    "q_predicted", "q_forced", "gpu_fill_count", "cpu_execute_count",
++    "bytes_h2d", "cache_occupancy", "pcie_time_ms", "cpu_time_ms",
++    "gpu_time_ms", "layer_time_ms", "decode_tps",
++)
++
++
++class DecodeTrace:
++    def __init__(self, path: str, cache) -> None:
++        self.cache = cache
++        self.path = path
++        self.run_id = os.getenv("FREETOKEN_MOE_TRACE_RUN_ID", "")
++        self.model_id = os.getenv("FREETOKEN_MOE_TRACE_MODEL_ID", "")
++        self.steps = [0] * cache.num_layers
++        self.pending: dict | None = None
++        self.timing_enabled = os.getenv("FREETOKEN_MOE_LAYER_TIMING") == "1"
++        self.layer_started_at: float | None = None
++        self.q_switch_file = os.getenv("FREETOKEN_MOE_Q_SWITCH_FILE")
++        self.measure_q = (int(os.environ["FREETOKEN_MOE_MEASURE_Q"])
++                          if self.q_switch_file else None)
++        self.q_switched = False
++
++    def start_layer(self) -> None:
++        if self.q_switch_file and not self.q_switched and os.path.exists(self.q_switch_file):
++            self.cache.hybrid_max_fetch = self.measure_q
++            self.q_switched = True
++        if self.timing_enabled:
++            self.layer_started_at = time.perf_counter()
++
++    def begin(self, layer_id: int, expert_ids: torch.Tensor) -> None:
++        if expert_ids.is_cuda and torch.cuda.is_current_stream_capturing():
++            raise RuntimeError("FREETOKEN_MOE_DECODE_TRACE_CSV requires eager decode (--no-graph)")
++        if self.pending is not None:
++            raise RuntimeError("previous MoE decode trace row was not completed")
++        if self.timing_enabled:
++            self.pending = {
++                "timestamp": datetime.now(timezone.utc).isoformat(),
++                "run_id": self.run_id,
++                "model_id": self.model_id,
++                "request_id": "",
++                "token_index": self.steps[layer_id],
++                "layer_id": layer_id,
++                "E": self.cache.num_experts,
++                "k": expert_ids.shape[-1],
++                "_ids": expert_ids.reshape(-1).clone(),
++                "_slots": self.cache.slot_for_id[layer_id].clone(),
++            }
++            return
++        ids = expert_ids.reshape(-1).tolist()
++        unique = sorted(set(ids))
++        resident = self.cache.slot_for_id[layer_id, unique].tolist()
++        hits = sum(slot >= 0 for slot in resident)
++        self.pending = {
++            "timestamp": datetime.now(timezone.utc).isoformat(),
++            "run_id": self.run_id,
++            "model_id": self.model_id,
++            "request_id": "",
++            "token_index": self.steps[layer_id],
++            "layer_id": layer_id,
++            "E": self.cache.num_experts,
++            "k": expert_ids.shape[-1],
++            "routed_experts": ";".join(map(str, ids)),
++            "unique_routed_count": len(unique),
++            "hit_count": hits,
++            "miss_count": len(unique) - hits,
++            "m": len(unique) - hits,
++        }
++
++    def finish(self) -> None:
++        if self.pending is None or self.timing_enabled:
++            return
++        self._populate_pending()
++        self._write_pending()
++
++    def _populate_pending(self) -> None:
++        row = self.pending
++        assert row is not None
++        if "_ids" in row:
++            ids = row.pop("_ids").tolist()
++            slots = row.pop("_slots")
++            unique = sorted(set(ids))
++            hits = sum(int(slot) >= 0 for slot in slots[unique].tolist())
++            row.update({
++                "routed_experts": ";".join(map(str, ids)),
++                "unique_routed_count": len(unique),
++                "hit_count": hits,
++                "miss_count": len(unique) - hits,
++                "m": len(unique) - hits,
++            })
++        cache = self.cache
++        layer_id = row["layer_id"]
++        fetched = int(cache.num_indices.item())
++        missing = row["miss_count"]
++        if cache.decode_target == "hybrid":
++            actual_missing = int(cache.num_missing_full.item())
++            if actual_missing != missing:
++                raise RuntimeError(f"MoE trace miss mismatch: {missing} vs {actual_missing}")
++        bank_bytes = [
++            source[layer_id][0].numel() * source[layer_id].element_size()
++            for source, _ in cache.banks
++        ]
++        expert_size_bytes = sum(bank_bytes)
++        row.update({
++            "bank_count": len(bank_bytes),
++            "bank_bytes": ";".join(map(str, bank_bytes)),
++            "expert_size_bytes": expert_size_bytes,
++            "cache_slots": cache.cache_size,
++            "cache_bytes": cache.cache_size * expert_size_bytes,
++            "q_predicted": fetched if cache.decode_target == "hybrid" and cache.hybrid_fetch_fraction > 0 else "",
++            "q_forced": cache.hybrid_max_fetch if cache.decode_target == "hybrid" and cache.hybrid_fetch_fraction <= 0 else "",
++            "gpu_fill_count": fetched,
++            "cpu_execute_count": missing - fetched,
++            "bytes_h2d": fetched * expert_size_bytes,
++            "cache_occupancy": int((cache.id_of_slot >= 0).sum().item()),
++        })
++
++    def finish_layer(self) -> None:
++        if not self.timing_enabled:
++            return
++        if self.layer_started_at is None or self.pending is None:
++            raise RuntimeError("MoE layer timer was not started or trace row was not prepared")
++        torch.cuda.synchronize(self.cache.device)
++        elapsed_ms = (time.perf_counter() - self.layer_started_at) * 1000
++        self.layer_started_at = None
++        self._populate_pending()
++        self.pending["layer_time_ms"] = elapsed_ms
++        self._write_pending()
++
++    def _write_pending(self) -> None:
++        row = self.pending
++        assert row is not None
++        os.makedirs(os.path.dirname(os.path.abspath(self.path)), exist_ok=True)
++        needs_header = not os.path.exists(self.path) or os.path.getsize(self.path) == 0
++        with open(self.path, "a", newline="") as output:
++            writer = csv.DictWriter(output, fieldnames=FIELDS)
++            if needs_header:
++                writer.writeheader()
++            writer.writerow(row)
++        self.steps[row["layer_id"]] += 1
++        self.pending = None
+diff --git a/python/freetoken/moe/layer_replay.py b/python/freetoken/moe/layer_replay.py
+new file mode 100644
+index 0000000..be2c181
+--- /dev/null
++++ b/python/freetoken/moe/layer_replay.py
+@@ -0,0 +1,283 @@
++"""Opt-in, same-state replay of one real hybrid decode layer."""
++
++from __future__ import annotations
++
++import csv
++import json
++import math
++import os
++import random
++import statistics
++import time
++from contextlib import nullcontext
++from pathlib import Path
++
++import torch
++
++
++STATE_TENSORS = (
++    "slot_for_id", "id_of_slot", "usage", "step", "expert_recency",
++    "active_mask", "evict_slots", "src_indices", "num_indices",
++    "num_missing_full",
++)
++
++
++class CacheSnapshot:
++    def __init__(self, cache) -> None:
++        self.tensors = {name: getattr(cache, name).clone() for name in STATE_TENSORS}
++        self.pending_src_layer = cache._pending_src_layer
++        self.pending_whole_layer = cache._pending_whole_layer
++
++    def restore(self, cache) -> None:
++        for name, value in self.tensors.items():
++            getattr(cache, name).copy_(value)
++        cache._pending_src_layer = self.pending_src_layer
++        cache._pending_whole_layer = self.pending_whole_layer
++
++    def matches(self, cache) -> bool:
++        return all(torch.equal(getattr(cache, name), value)
++                   for name, value in self.tensors.items())
++
++
++class SlotBackup:
++    def __init__(self) -> None:
++        self.slots = None
++        self.values = []
++
++    def capture(self, cache) -> None:
++        if self.slots is not None:
++            raise RuntimeError("previous replay slot backup was not restored")
++        count = int(cache.num_indices.item())
++        self.slots = cache.evict_slots[:count].long().clone()
++        self.values = [bank.index_select(0, self.slots) for _, bank in cache.banks]
++
++    def restore(self, cache) -> None:
++        if self.slots is None:
++            return
++        for (_, bank), values in zip(cache.banks, self.values):
++            bank.view(torch.uint8).index_copy_(0, self.slots, values.view(torch.uint8))
++        self.slots = None
++        self.values = []
++
++
++def _events() -> dict[str, torch.cuda.Event]:
++    return {name: torch.cuda.Event(enable_timing=True)
++            for name in ("pcie_start", "pcie_end", "gpu_start", "gpu_end")}
++
++
++def predicted_q(m: int, fraction: float) -> int:
++    frac = min(1 << 16, max(0, round(fraction * (1 << 16))))
++    lo = (m * frac) >> 16
++    cost = lambda q: max(q * ((1 << 16) - frac), (m - q) * frac)
++    return min(m, lo if cost(lo) <= cost(lo + 1) else lo + 1)
++
++
++def cpu_branch_metrics(elapsed_ms: float, experts: int, expert_bytes: int) -> dict:
++    if not math.isfinite(elapsed_ms) or elapsed_ms <= 0 or experts < 0 or expert_bytes <= 0:
++        raise ValueError("CPU timing must be positive with valid expert counts and bytes")
++    return {"cpu_task_ms": elapsed_ms,
++            "cpu_effective_gbps": experts * expert_bytes / (elapsed_ms * 1e6)}
++
++
++def _write_csv(path: Path, rows: list[dict]) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with path.open("w", newline="") as f:
++        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
++        writer.writeheader()
++        writer.writerows(rows)
++
++
++def run(layer, cache, hidden_states: torch.Tensor, topk_weights: torch.Tensor,
++        topk_ids: torch.Tensor, path: Path, *, misses: int, repeats: int,
++        warmup: int, seed: int = 42, match_index: int = 0) -> None:
++    if path.exists():
++        raise FileExistsError(path)
++    if cache.collect_stats or cache.collect_decode_freq:
++        raise RuntimeError("layer replay requires MoE stats and decode-frequency collection disabled")
++    if repeats < 2 or warmup < 0:
++        raise ValueError("repeats must be >=2 and warmup >=0")
++    if hidden_states.shape[0] != 1:
++        raise RuntimeError("layer replay requires batch size 1")
++    ids = topk_ids.reshape(-1).tolist()
++    unique = sorted(set(ids))
++    actual_m = sum(int(cache.slot_for_id[layer.layer_id, expert]) < 0 for expert in unique)
++    if actual_m != misses:
++        raise ValueError(f"expected {misses} misses, got {actual_m}")
++
++    torch.cuda.synchronize(cache.device)
++    snapshot = CacheSnapshot(cache)
++    old_trace = cache.decode_trace
++    trace_step = (old_trace.steps[layer.layer_id] if old_trace is not None else None)
++    old_q = cache.hybrid_max_fetch
++    old_fraction = cache.hybrid_fetch_fraction
++    if old_fraction <= 0:
++        raise RuntimeError("layer replay needs the calibrated automatic hybrid fraction")
++    backup = SlotBackup()
++    profile_path = os.getenv("FREETOKEN_MOE_LAYER_REPLAY_PROFILE_OUT")
++    cpu_timing = os.getenv("FREETOKEN_MOE_LAYER_REPLAY_CPU_TIMING") == "1"
++    executor = cache.cpu_executor
++    cpu_task = None
++    if cpu_timing:
++        if not hasattr(executor._ext, "set_task_timing"):
++            raise RuntimeError("CPU replay timing requires rebuilding the native extension")
++        cpu_task = executor._task_for(layer.layer_id, hidden_states.shape[0])
++    profiler = (torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU,
++                                                    torch.profiler.ProfilerActivity.CUDA])
++                if profile_path else None)
++    cache._layer_replay_active = True
++    cache.decode_trace = None
++    reference = None
++    raw = []
++
++    def trial(q: int, repeat: int) -> None:
++        nonlocal reference
++        snapshot.restore(cache)
++        if not snapshot.matches(cache):
++            raise RuntimeError("cache bookkeeping did not restore exactly")
++        cache.hybrid_max_fetch = q
++        cache.hybrid_fetch_fraction = 0.0
++        cache.ensure_experts_hybrid(layer.layer_id, topk_ids.clone())
++        if int(cache.num_missing_full.item()) != misses or int(cache.num_indices.item()) != q:
++            raise RuntimeError("preflight did not produce the requested miss/fill count")
++        backup.capture(cache)
++        snapshot.restore(cache)
++        x = hidden_states.clone()
++        weights = topk_weights.clone()
++        routed = topk_ids.clone()
++        events = _events()
++        cache._layer_replay_events = events
++        torch.cuda.synchronize(cache.device)
++        torch.cuda.nvtx.range_push(f"moe_replay_layer_{layer.layer_id}_m{misses}_q{q}")
++        start = time.perf_counter()
++        try:
++            record = (torch.profiler.record_function(f"moe_replay_q{q}")
++                      if profiler is not None else nullcontext())
++            with record:
++                output = layer._decode_hybrid(cache, x, weights, routed)
++                torch.cuda.synchronize(cache.device)
++        finally:
++            torch.cuda.nvtx.range_pop()
++        elapsed = 1000 * (time.perf_counter() - start)
++        seen_m = int(cache.num_missing_full.item())
++        seen_q = int(cache.num_indices.item())
++        if seen_m != misses or seen_q != q:
++            raise RuntimeError(f"replay changed miss/fill count: {(seen_m, seen_q)} != {(misses, q)}")
++        if not torch.equal(cache.evict_slots[:seen_q].long(), backup.slots):
++            raise RuntimeError("replay changed eviction slots after preflight")
++        if q == 0 and reference is None:
++            reference = output.detach().clone()
++        max_abs_diff = (output.detach() - reference).abs().max().item() if reference is not None else None
++        if repeat >= 0:
++            expert_bytes = sum(source[layer.layer_id][0].numel() *
++                               source[layer.layer_id][0].element_size()
++                               for source, _ in cache.banks)
++            raw.append({
++                "layer_id": layer.layer_id, "m": misses, "q": q,
++                "repeat": repeat, "seed": seed, "routed_experts": ";".join(map(str, ids)),
++                "cache_slots": cache.cache_size, "expert_bytes": expert_bytes,
++                "actual_m": seen_m, "actual_q": seen_q,
++                "layer_wall_ms": elapsed,
++                "pcie_device_ms": events["pcie_start"].elapsed_time(events["pcie_end"]),
++                "gpu_gemm_device_ms": events["gpu_start"].elapsed_time(events["gpu_end"]),
++                "max_abs_output_diff_vs_q0": max_abs_diff,
++                "scope": "production_layer_fixed_input_and_cache",
++            })
++            if cpu_timing:
++                raw[-1].update(cpu_branch_metrics(
++                    executor._ext.task_timing_ms(cpu_task), misses - q, expert_bytes))
++        backup.restore(cache)
++
++    if profiler is not None:
++        profiler.start()
++    torch.cuda.nvtx.range_push("moe_replay_sweep")
++    try:
++        if cpu_timing:
++            executor._ext.set_task_timing(cpu_task, True)
++        trial(0, -1)
++        rng = random.Random(seed)
++        for repeat in range(-warmup, repeats):
++            order = list(range(misses + 1))
++            rng.shuffle(order)
++            for q in order:
++                trial(q, repeat)
++        snapshot.restore(cache)
++        torch.cuda.synchronize(cache.device)
++        if not snapshot.matches(cache):
++            raise RuntimeError("cache bookkeeping changed after replay")
++    finally:
++        if cpu_timing:
++            torch.cuda.synchronize(cache.device)
++            executor._ext.set_task_timing(cpu_task, False)
++        torch.cuda.nvtx.range_pop()
++        backup.restore(cache)
++        snapshot.restore(cache)
++        cache.decode_trace = old_trace
++        cache.hybrid_max_fetch = old_q
++        cache.hybrid_fetch_fraction = old_fraction
++        cache._layer_replay_active = False
++        cache._layer_replay_events = None
++        if profiler is not None:
++            profiler.stop()
++
++    if profiler is not None:
++        profile_target = Path(profile_path)
++        profile_target.parent.mkdir(parents=True, exist_ok=True)
++        profiler.export_chrome_trace(str(profile_target))
++
++    _write_csv(path, raw)
++    medians = {q: statistics.median(row["layer_wall_ms"] for row in raw if row["q"] == q)
++               for q in range(misses + 1)}
++    oracle = min(medians, key=medians.get)
++    profile_fraction = old_fraction
++    predicted = predicted_q(misses, profile_fraction)
++    summary = [{
++        "layer_id": layer.layer_id, "m": misses, "q": q, "n": repeats,
++        "median_layer_wall_ms": medians[q], "q_predicted": predicted,
++        "q_oracle": oracle, "q_error": predicted - oracle,
++        "latency_penalty_predicted": medians[predicted] / medians[oracle] - 1,
++        "max_abs_output_diff_vs_q0": max(row["max_abs_output_diff_vs_q0"]
++                                         for row in raw if row["q"] == q),
++        "scope": "production_layer_fixed_input_and_cache",
++    } for q in range(misses + 1)]
++    _write_csv(path.with_name(path.stem + "_summary.csv"), summary)
++    path.with_name(path.stem + "_config.json").write_text(json.dumps({
++        "layer_id": layer.layer_id, "m": misses, "repeats": repeats,
++        "warmup": warmup, "seed": seed, "routed_experts": ids,
++        "match_index": match_index, "trace_step": trace_step,
++        "cache_slots": cache.cache_size, "expert_bytes": raw[0]["expert_bytes"],
++        "fraction": profile_fraction, "q_predicted": predicted,
++        "cpu_timing": cpu_timing,
++        "cpu_timing_scope": ("native submit preparation, worker dispatch, and compute; "
++                             "excludes D2H, coordinator wait, and output H2D"
++                             if cpu_timing else None),
++        "caveat": "One real layer input and cache snapshot; not whole-model decode throughput",
++    }, indent=2) + "\n")
++
++
++def maybe_run(layer, cache, hidden_states: torch.Tensor,
++              topk_weights: torch.Tensor, topk_ids: torch.Tensor) -> None:
++    path = os.getenv("FREETOKEN_MOE_LAYER_REPLAY_OUT")
++    arm_file = os.getenv("FREETOKEN_MOE_LAYER_REPLAY_ARM_FILE")
++    if (not path or not arm_file or not os.path.exists(arm_file) or
++            getattr(cache, "_layer_replay_active", False) or
++            getattr(cache, "_layer_replay_done", False)):
++        return
++    selected_layer = os.getenv("FREETOKEN_MOE_LAYER_REPLAY_LAYER")
++    if selected_layer is not None and layer.layer_id != int(selected_layer):
++        return
++    misses = int(os.getenv("FREETOKEN_MOE_LAYER_REPLAY_M", "4"))
++    unique = topk_ids.reshape(-1).unique()
++    count = int((cache.slot_for_id[layer.layer_id, unique.long()] < 0).sum().item())
++    if count != misses:
++        return
++    match_index = getattr(cache, "_layer_replay_match_count", 0)
++    cache._layer_replay_match_count = match_index + 1
++    if match_index < int(os.getenv("FREETOKEN_MOE_LAYER_REPLAY_SKIP_MATCHES", "0")):
++        return
++    if torch.cuda.is_current_stream_capturing():
++        raise RuntimeError("layer replay requires eager decode")
++    cache._layer_replay_done = True
++    run(layer, cache, hidden_states, topk_weights, topk_ids, Path(path), misses=misses,
++        repeats=int(os.getenv("FREETOKEN_MOE_LAYER_REPLAY_REPEATS", "40")),
++        warmup=int(os.getenv("FREETOKEN_MOE_LAYER_REPLAY_WARMUP", "3")),
++        match_index=match_index)
+diff --git a/python/freetoken/moe/routing_trace.py b/python/freetoken/moe/routing_trace.py
+new file mode 100644
+index 0000000..13e274d
+--- /dev/null
++++ b/python/freetoken/moe/routing_trace.py
+@@ -0,0 +1,183 @@
++"""Opt-in full-request routing observation before expert IDs become cache slots."""
++from __future__ import annotations
++
++import json
++import os
++from pathlib import Path
++
++import torch
++
++_ARM = os.getenv("FREETOKEN_MOE_ROUTING_ARM")
++_OBSERVER = None
++
++
++class RoutingObserver:
++    def __init__(self, arm_path: str):
++        self.arm_path = Path(arm_path)
++        self.capture_id = None
++        self.streams = {}
++        self.batch = None
++        self.chunk = {"prefill": 0, "decode": 0}
++        self.prompt_tokens = None
++        self.uid = None
++        self.pending_cache = None
++        self.cache_snapshot_written = False
++
++    def close(self):
++        for stream in self.streams.values():
++            stream.close()
++        self.streams = {}
++        self.batch = None
++
++    def emit(self, kind: str, row: dict):
++        self.streams[kind].write(json.dumps(row, allow_nan=False, separators=(",", ":")) + "\n")
++
++    def begin_batch(self, batch, cache):
++        self.batch = None
++        if not self.arm_path.exists():
++            self.close()
++            return
++        metadata = json.loads(self.arm_path.read_text())
++        if not metadata.get("armed"):
++            self.close()
++            return
++        if len(batch.reqs) != 1 or len(batch.padded_reqs) != 1:
++            raise RuntimeError("routing observation requires one unpadded request")
++        if torch.cuda.is_current_stream_capturing():
++            raise RuntimeError("routing observation requires eager execution")
++        req = batch.reqs[0]
++        if req.uid < 0:
++            return
++        if metadata["capture_id"] != self.capture_id:
++            self.close()
++            self.capture_id = metadata["capture_id"]
++            self.metadata = metadata
++            if cache is None or cache.decode_target != "hybrid":
++                raise RuntimeError("routing study requires the qualified hybrid cache")
++            if metadata.get("require_pinned_banks"):
++                residency = list(cache.layer_residency)
++                if len(residency) != cache.num_layers or any(value != "pinned" for value in residency):
++                    raise RuntimeError("routing qualification requires pinned expert banks in every layer")
++            cache.reset()
++            target = Path(metadata["directory"])
++            target.mkdir(parents=True, exist_ok=True)
++            if metadata.get("require_pinned_banks") and metadata.get("observe", True):
++                (target / "expert_bank_residency.json").write_text(json.dumps({
++                    "layer_residency": residency, "quant_format": cache.quant_format,
++                    "semantics": "native cache residency labels from attached host banks"}) + "\n")
++            self.streams = ({kind: (target / (kind + ".jsonl.partial")).open("x")
++                             for kind in ("routes", "batches", "cache", "scores")}
++                            if metadata.get("observe", True) else {})
++            self.chunk = {"prefill": 0, "decode": 0}
++            self.prompt_tokens = metadata["prompt_tokens"]
++            self.uid = req.uid
++            self.cache_snapshot_written = False
++        if req.uid != self.uid:
++            raise RuntimeError("armed capture spans more than one scheduler request")
++        if not metadata.get("observe", True):
++            return
++        positions = batch.positions.cpu().tolist()
++        ids = batch.input_ids.cpu().tolist()
++        if len(positions) != len(ids):
++            raise RuntimeError("input IDs and scheduler positions disagree")
++        self.batch = {"capture_id": self.capture_id, "request_id": metadata["request_id"],
++                      "engine_uid": req.uid, "phase": batch.phase,
++                      "chunk_index": self.chunk[batch.phase], "input_positions": positions,
++                      "input_token_ids": ids, "prompt_tokens": self.prompt_tokens}
++        self.chunk[batch.phase] += 1
++        if batch.is_decode and not self.cache_snapshot_written:
++            if cache is None:
++                raise RuntimeError("native cache snapshot is unavailable")
++            state = {name: getattr(cache, name).cpu().tolist() for name in
++                     ("slot_for_id", "id_of_slot", "usage", "step", "expert_recency")}
++            state.update({"cache_slots": cache.cache_size, "experts": cache.num_experts,
++                          "layers": cache.num_layers, "fetch_fraction": cache.hybrid_fetch_fraction,
++                          "max_fetch": cache.hybrid_max_fetch, "policy": cache.cache_policy})
++            (Path(metadata["directory"]) / "decode_initial_cache.json").write_text(json.dumps(state) + "\n")
++            self.cache_snapshot_written = True
++
++    def observe(self, layer, weights, ids, cache):
++        if self.batch is None:
++            return
++        raw_ids = ids.cpu().tolist()
++        raw_weights = weights.cpu().tolist()
++        positions = self.batch["input_positions"]
++        if len(raw_ids) != len(positions) or len(raw_weights) != len(positions):
++            raise RuntimeError("routing rows do not match the native batch")
++        for index, position in enumerate(positions):
++            self.emit("routes", {"schema_version": 1, "capture_id": self.capture_id,
++                       "request_id": self.metadata["request_id"], "phase": self.batch["phase"],
++                       "chunk_index": self.batch["chunk_index"], "layer_id": layer.layer_id,
++                       "input_position": position, "input_token_id": self.batch["input_token_ids"][index],
++                       "phase_token_index": position if self.batch["phase"] == "prefill" else position - self.prompt_tokens,
++                       "expert_ids": raw_ids[index], "effective_weights": raw_weights[index],
++                       "selection_probability": None, "is_shared_expert": False,
++                       "weight_semantics": "native_effective_selected_weights", "E": layer.num_experts,
++                       "k": layer.top_k})
++        if self.batch["phase"] == "decode":
++            if cache is None or len(raw_ids) != 1:
++                raise RuntimeError("cache observation requires one offloaded decode token")
++            slots = cache.slot_for_id[layer.layer_id, raw_ids[0]].cpu().tolist()
++            self.pending_cache = {"layer_id": layer.layer_id, "raw_ids": raw_ids[0],
++                                  "slots_before": slots, "old_ids": cache.id_of_slot.clone()}
++
++    def observe_scores(self, layer_id: int, logits):
++        if self.batch is None or not self.metadata.get("full_scores"):
++            return
++        values = logits.float().cpu().tolist()
++        if len(values) != len(self.batch["input_positions"]):
++            raise RuntimeError("router logits do not match native positions")
++        for index, position in enumerate(self.batch["input_positions"]):
++            self.emit("scores", {"phase": self.batch["phase"], "layer_id": layer_id,
++                                "input_position": position, "scores": values[index],
++                                "semantics": "native_router_logits"})
++
++    def finish_cache(self, cache):
++        pending = self.pending_cache
++        if pending is None:
++            return
++        q = int(cache.num_indices.item())
++        slots = cache.evict_slots[:q].cpu().tolist()
++        sources = cache.src_indices[:q].cpu().tolist()
++        old_ids = pending["old_ids"][slots].cpu().tolist() if slots else []
++        missing = [e for e, s in zip(pending["raw_ids"], pending["slots_before"]) if s < 0]
++        if int(cache.num_missing_full.item()) != len(missing):
++            raise RuntimeError("observed cache miss count disagrees with native hybrid kernel")
++        self.emit("cache", {"capture_id": self.capture_id, "request_id": self.metadata["request_id"],
++                  "phase": "decode", "input_position": self.batch["input_positions"][0],
++                  "layer_id": pending["layer_id"], "raw_ids": pending["raw_ids"],
++                  "slots_before": pending["slots_before"], "missing_ids": missing,
++                  "m": len(missing), "q": q, "admitted_ids": sources,
++                  "evict_slots": slots, "evicted_flat_ids": old_ids,
++                  "step": int(cache.step.item()), "cache_slots": cache.cache_size,
++                  "cpu_executions": len(missing) - q})
++        self.pending_cache = None
++
++    def end_batch(self, next_tokens):
++        if self.batch is None:
++            return
++        if self.pending_cache is not None:
++            raise RuntimeError("cache observation was not completed")
++        self.emit("batches", {**self.batch, "sampled_token_ids": next_tokens.cpu().tolist()})
++        for stream in self.streams.values():
++            stream.flush()
++        self.batch = None
++
++
++def observer():
++    global _OBSERVER
++    if _ARM and _OBSERVER is None:
++        _OBSERVER = RoutingObserver(_ARM)
++    return _OBSERVER
++
++
++def observe_routes(layer, weights, ids, cache=None):
++    trace = observer()
++    if trace is not None:
++        trace.observe(layer, weights, ids, cache)
++
++
++def observe_scores(layer_id, logits):
++    trace = observer()
++    if trace is not None:
++        trace.observe_scores(layer_id, logits)

@@ -1,0 +1,23 @@
+{
+  "source": "/home/ankit/Development/FreeToken-Reproduce/docs/presentations/FreeToken_Weekly_Progress_08-10-2026 (1).pptx",
+  "source_sha256": "9d036d0b0f72b6067e14679205aa9ee09dbd261ca6bdd571ff8b66ef456c77f5",
+  "output": "/home/ankit/Development/FreeToken-Reproduce/docs/presentations/FreeToken_Weekly_Progress_08-10-2026_with_static_pruning.pptx",
+  "slides": 30,
+  "added_static_slides": 8,
+  "inserted_at": 3,
+  "blank_slide_positions": [
+    11,
+    12
+  ],
+  "original_slide3_new_position": 13,
+  "original_slides_preserved_byte_for_byte": true,
+  "source_notes_included": true,
+  "figures": "PNG in slides; SVG/PDF/PNG and exact source cells alongside builder",
+  "output_sha256": "ad98714e7619777a387b9cbb44e0eec10ac1d528e4a4528425cd630eb73cbaae",
+  "speaker_notes": "docs/presentations/speaker_notes_20261008_slides_1-10.md",
+  "package_review": "30 slides readable with python-pptx; original slides preserved; new relationships resolve; table cells have one text body; slides 11/12 empty",
+  "layout_review": "Original-font authoring previews; no detected text overflow",
+  "source_original_path": "/home/ankit/Development/FreeToken-Reproduce/FreeToken_Weekly_Progress_08-10-2026 (1).pptx",
+  "output_original_path": "/home/ankit/Development/FreeToken-Reproduce/FreeToken_Weekly_Progress_08-10-2026_with_static_pruning.pptx",
+  "relocated_20261012": true
+}

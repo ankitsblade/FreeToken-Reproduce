@@ -1,0 +1,565 @@
+{
+ "groups": [
+  {
+   "workload": "low_miss",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.0
+     },
+     "seed": 0,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "seed": 0,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "seed": 0,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "seed": 0,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "seed": 0,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "uniform_a",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 1.0
+     },
+     "seed": 11,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "uniform_b",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 1.0
+     },
+     "seed": 12,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "x0_e05",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.05
+     },
+     "seed": 21,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "x0_e15",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.15
+     },
+     "seed": 22,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "x0_e30",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.3
+     },
+     "seed": 23,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "x25_e20",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0.25,
+      "eps": 0.2
+     },
+     "seed": 24,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "x50_e20",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0.5,
+      "eps": 0.2
+     },
+     "seed": 25,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "t0011_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 31,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "t0111_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       1,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 32,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "t1111_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       1,
+       1,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 33,
+     "log": "data/raw/explore_low_miss.csv"
+    },
+    {
+     "name": "t0012_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       2
+      ],
+      "eps": 0.1
+     },
+     "seed": 34,
+     "log": "data/raw/explore_low_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "med_miss",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.0
+     },
+     "seed": 0,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "seed": 0,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "seed": 0,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "seed": 0,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "seed": 0,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "uniform_a",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 1.0
+     },
+     "seed": 11,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "uniform_b",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 1.0
+     },
+     "seed": 12,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "x0_e05",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.05
+     },
+     "seed": 21,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "x0_e15",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.15
+     },
+     "seed": 22,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "x0_e30",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.3
+     },
+     "seed": 23,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "x25_e20",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0.25,
+      "eps": 0.2
+     },
+     "seed": 24,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "x50_e20",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0.5,
+      "eps": 0.2
+     },
+     "seed": 25,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "t0011_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 31,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "t0111_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       1,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 32,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "t1111_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       1,
+       1,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 33,
+     "log": "data/raw/explore_med_miss.csv"
+    },
+    {
+     "name": "t0012_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       2
+      ],
+      "eps": 0.1
+     },
+     "seed": 34,
+     "log": "data/raw/explore_med_miss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "high_miss",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.0
+     },
+     "seed": 0,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "seed": 0,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "seed": 0,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "seed": 0,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "seed": 0,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "uniform_a",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 1.0
+     },
+     "seed": 11,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "uniform_b",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 1.0
+     },
+     "seed": 12,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "x0_e05",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.05
+     },
+     "seed": 21,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "x0_e15",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.15
+     },
+     "seed": 22,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "x0_e30",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0,
+      "eps": 0.3
+     },
+     "seed": 23,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "x25_e20",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0.25,
+      "eps": 0.2
+     },
+     "seed": 24,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "x50_e20",
+     "spec": {
+      "kind": "explore",
+      "fraction": 0.5,
+      "eps": 0.2
+     },
+     "seed": 25,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "t0011_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 31,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "t0111_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       1,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 32,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "t1111_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       1,
+       1,
+       1,
+       1
+      ],
+      "eps": 0.1
+     },
+     "seed": 33,
+     "log": "data/raw/explore_high_miss.csv"
+    },
+    {
+     "name": "t0012_e10",
+     "spec": {
+      "kind": "table",
+      "table": [
+       0,
+       0,
+       0,
+       1,
+       2
+      ],
+      "eps": 0.1
+     },
+     "seed": 34,
+     "log": "data/raw/explore_high_miss.csv"
+    }
+   ]
+  }
+ ]
+}

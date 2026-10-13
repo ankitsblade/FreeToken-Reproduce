@@ -1,0 +1,19 @@
+{
+  "version": 5,
+  "id": "serial_uv_arenas_text_only_warmup_v5",
+  "expert_load": "serial",
+  "text_model_only_models": ["qwen_nvfp4"],
+  "allocator_environment": {"MALLOC_ARENA_MAX": "2"},
+  "warmup_completion_tokens": 64,
+  "minimum_host_available_bytes": 4294967296,
+  "maximum_inference_swap_bytes": 134217728,
+  "maximum_server_swap_bytes": null,
+  "maximum_server_swap_growth_bytes": 16777216,
+  "maximum_full_pressure_percent": 1.0,
+  "pressure_window_seconds": 30,
+  "minimum_inference_samples": 30,
+  "settle_timeout_seconds": 90,
+  "settle_quiet_seconds": 10,
+  "settle_swap_bytes_per_sample": 1048576,
+  "require_pinned_banks": true
+}

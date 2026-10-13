@@ -1,0 +1,10 @@
+{
+  "base_commit": "4d0f84983700eba7dfb046fb4df3cbbcc488ecc2",
+  "source_repository": "https://github.com/ankitsblade/FreeToken-Reproduce.git",
+  "patch": "runtime/patches/experiment-hooks.patch",
+  "archive": "archives/layout_20261013/engine_and_build.zip",
+  "archive_sha256": "1fc8fa1330611e2dd40929a037e0f11c9928a208bf28c39b35696732b3694164",
+  "patch_sha256": "5db728e38ce6faec74894673eb722bc6e34138d116c0dd5dae35787dac74d35e",
+  "platform": "Linux x86_64 NVIDIA CUDA 13",
+  "warning": "Host runtime snapshot differs from the sealed v6 pruning runtime; do not resume sealed studies with refactored collectors."
+}

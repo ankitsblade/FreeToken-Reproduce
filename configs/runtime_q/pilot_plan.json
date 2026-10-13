@@ -1,0 +1,95 @@
+{
+ "groups": [
+  {
+   "workload": "med_miss",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 1,
+   "episodes": [
+    {
+     "name": "native",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "qstar_host",
+     "spec": {
+      "kind": "fraction",
+      "fraction": -1
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "q0",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.0
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "f25",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "f50",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.5
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "f75",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.75
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "qm",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 1.0
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "native_again",
+     "spec": {
+      "kind": "native"
+     },
+     "log": "results/pilot/pilot_rows.csv"
+    },
+    {
+     "name": "native_lean",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    },
+    {
+     "name": "f25_lean",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.25
+     },
+     "groups": [
+      "BASE",
+      "G1_routing"
+     ]
+    }
+   ]
+  }
+ ]
+}

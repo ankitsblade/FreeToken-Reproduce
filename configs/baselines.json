@@ -1,0 +1,5 @@
+{
+  "gpt_oss_mxfp4": {"layers": 24, "experts": 32, "top_k": 4, "cache_slots": 154, "memory_ratio": 0.9, "max_seq_len": 2048},
+  "qwen_nvfp4": {"layers": 40, "experts": 256, "top_k": 8, "cache_slots": 2048, "memory_ratio": 0.9, "max_seq_len": 2048},
+  "gemma_nvfp4": {"layers": 30, "experts": 128, "top_k": 8, "cache_slots": 768, "memory_ratio": 0.8, "max_seq_len": 1280}
+}
