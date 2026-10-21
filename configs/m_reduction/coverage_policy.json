@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source_plan": "docs/PLAN.md",
+  "required_models": ["gpt_oss_mxfp4", "qwen_nvfp4", "gemma_nvfp4"],
+  "required_experiments": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"],
+  "required_pilot_arms": ["native_floor0", "native_floor1", "reuse_freq_floor0", "reuse_freq_floor1"],
+  "pilot_requests_per_arm": 15,
+  "primary_requests_per_model": 90,
+  "repeat_captures_per_model": 18,
+  "pruning_retention_fractions": [1.0, 0.75],
+  "gpu_experiments_serial": true,
+  "missing_or_blocked_model_keeps_experiment_unfinished": true,
+  "p2_support_required": ["sequential_teacher_forcing", "full_vocabulary_distributions", "expert_norms_and_probes"]
+}

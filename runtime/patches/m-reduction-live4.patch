@@ -1,0 +1,157 @@
+diff -ruN -x __pycache__ -x '*.so' m_reduction_v3_live2_20261015T045932Z/python/freetoken/engine/engine.py m_reduction_v3_live4_20261020T151654Z/python/freetoken/engine/engine.py
+--- m_reduction_v3_live2_20261015T045932Z/python/freetoken/engine/engine.py	2026-10-14 17:54:16.660680423 +0530
++++ m_reduction_v3_live4_20261020T151654Z/python/freetoken/engine/engine.py	2026-10-20 20:47:21.702293899 +0530
+@@ -1030,6 +1030,11 @@
+ 
+     def forward_batch(self, batch: Batch, args: BatchSamplingArgs) -> ForwardOutput:
+         assert torch.cuda.current_stream() == self.stream
++        if os.getenv("FREETOKEN_M_REDUCTION_SEED"):
++            # P1 seeding: before the observer so its decode_initial_cache snapshot is the seeded state.
++            from freetoken.moe.m_reduction_seed import before_forward
++
++            before_forward(batch, self.moe_offload_cache)
+         route_observer = None
+         if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
+             from freetoken.moe.routing_trace import observer
+diff -ruN -x __pycache__ -x '*.so' m_reduction_v3_live2_20261015T045932Z/python/freetoken/layers/moe.py m_reduction_v3_live4_20261020T151654Z/python/freetoken/layers/moe.py
+--- m_reduction_v3_live2_20261015T045932Z/python/freetoken/layers/moe.py	2026-10-15 10:29:32.731721397 +0530
++++ m_reduction_v3_live4_20261020T151654Z/python/freetoken/layers/moe.py	2026-10-20 20:47:21.701614796 +0530
+@@ -267,6 +267,10 @@
+             from freetoken.moe.routing_trace import alias_ids
+ 
+             topk_ids = alias_ids(self.layer_id, topk_ids)
++        if os.getenv("FREETOKEN_M_REDUCTION_SEED") and self.offload_cache is not None:
++            from freetoken.moe.m_reduction_seed import observe_prefill
++
++            observe_prefill(self.layer_id, self.offload_cache, topk_ids)
+         return self._prefill_routed(hidden_states, topk_weights, topk_ids)
+ 
+     # ------------------------------------------------------------------
+diff -ruN -x __pycache__ -x '*.so' m_reduction_v3_live2_20261015T045932Z/python/freetoken/moe/m_reduction_seed.py m_reduction_v3_live4_20261020T151654Z/python/freetoken/moe/m_reduction_seed.py
+--- m_reduction_v3_live2_20261015T045932Z/python/freetoken/moe/m_reduction_seed.py	1970-01-01 05:30:00.000000000 +0530
++++ m_reduction_v3_live4_20261020T151654Z/python/freetoken/moe/m_reduction_seed.py	2026-10-20 20:47:13.273664755 +0530
+@@ -0,0 +1,110 @@
++"""m-reduction P1 prefill-informed seeding, live arm (plan section 5).
++
++Armed by ``FREETOKEN_M_REDUCTION_SEED`` (a JSON control ``{"window": null, "log": path}``).
++Prefill counts every routed (layer, expert) of the prompt and its last touch
++(``position * layers + layer``). At the first decode step of the request, before the
++decode forward, the global slot cache is filled with the C most frequent prompt routes
++(ties by layer ID then expert ID), each slot's LRU timestamp and every prompt-touched
++expert's recency ordered by last prompt touch, and ``step`` placed after every prompt
++touch -- the state ``experiments/pruning/m_reduction_p1_seed.seeded_state`` replays.
++The seed rows are real host->GPU copies through the cache's own ``copy_missing`` path,
++inside the request (charged to TTFT and latency); entries, bytes and wall time are logged.
++Only whole-prompt seeding is implemented; it cannot be combined with a replacement arm.
++"""
++
++import json
++import os
++import time
++from pathlib import Path
++
++import torch
++
++_CONTROL = None
++_STATE = {"counts": None, "last": None, "pending": False}
++
++
++def _control():
++    global _CONTROL
++    if _CONTROL is None:
++        _CONTROL = json.loads(Path(os.environ["FREETOKEN_M_REDUCTION_SEED"]).read_text())
++        if _CONTROL.get("window") is not None:
++            raise ValueError("live seeding implements the whole-prompt window only")
++        if os.getenv("FREETOKEN_M_REDUCTION_REPLACEMENT") or os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++            raise ValueError("live seeding is a native-LRU arm; no replacement or merge control")
++    return _CONTROL
++
++
++def observe_prefill(layer_id, cache, topk_ids):
++    """Count this prefill chunk's routes for one layer (prefill is eager, never captured)."""
++    from freetoken.core import get_global_ctx
++
++    _control()
++    size = cache.num_layers * cache.num_experts
++    if _STATE["counts"] is None or _STATE["counts"].numel() != size:
++        _STATE["counts"] = torch.zeros(size, dtype=torch.int64, device=topk_ids.device)
++        _STATE["last"] = torch.full((size,), -1, dtype=torch.int64, device=topk_ids.device)
++    positions = get_global_ctx().batch.positions
++    flat = (layer_id * cache.num_experts + topk_ids.long()).reshape(-1)
++    touch = (positions.long().unsqueeze(1) * cache.num_layers + layer_id).expand(-1, topk_ids.shape[1]).reshape(-1)
++    _STATE["counts"].index_add_(0, flat, torch.ones_like(flat))
++    _STATE["last"].scatter_reduce_(0, flat, touch, reduce="amax", include_self=True)
++    _STATE["pending"] = True
++
++
++def before_forward(batch, cache):
++    """Engine hook: reset the counts at a request's first prefill chunk; seed before its first decode."""
++    if cache is None or _STATE["counts"] is None:
++        return
++    if batch.phase == "prefill":
++        if int(batch.positions[0].item()) == 0:
++            _STATE["counts"].zero_()
++            _STATE["last"].fill_(-1)
++            _STATE["pending"] = False
++        return
++    if _STATE["pending"]:
++        _STATE["pending"] = False
++        seed(cache)
++
++
++def seed(cache):
++    layers, experts, capacity = cache.num_layers, cache.num_experts, cache.cache_size
++    counts, last = _STATE["counts"].cpu().tolist(), _STATE["last"].cpu().tolist()
++    touched = [f for f, value in enumerate(last) if value >= 0]
++    order = sorted(touched, key=lambda f: (last[f], f))  # oldest prompt touch first
++    rank = {f: i for i, f in enumerate(order)}
++    chosen = sorted((f for f in touched if counts[f] > 0), key=lambda f: (-counts[f], f // experts, f % experts))[:capacity]
++    torch.cuda.synchronize(cache.device)
++    start = time.perf_counter()
++    recency = torch.full((layers * experts,), -1, dtype=torch.int64)
++    if order:
++        recency[torch.tensor(order)] = torch.arange(len(order), dtype=torch.int64)
++    slot_for_id = torch.full((layers * experts,), -1, dtype=torch.int32)
++    id_of_slot = torch.full((capacity,), -1, dtype=torch.int32)
++    usage = torch.zeros((capacity,), dtype=torch.int64)
++    rows = {}
++    for slot, f in enumerate(chosen):
++        slot_for_id[f], id_of_slot[slot], usage[slot] = slot, f, rank[f]
++        rows.setdefault(f // experts, []).append((slot, f % experts))
++    cache.expert_recency.copy_(recency.view(layers, experts).to(cache.device))
++    cache.slot_for_id.copy_(slot_for_id.view(layers, experts).to(cache.device))
++    cache.id_of_slot.copy_(id_of_slot.to(cache.device))
++    cache.usage.copy_(usage.to(cache.device))
++    cache.step.fill_(len(order))
++    for layer, pairs in sorted(rows.items()):
++        n = len(pairs)
++        cache.evict_slots[:n].copy_(torch.tensor([s for s, _ in pairs], dtype=torch.int32).to(cache.device))
++        cache.src_indices[:n].copy_(torch.tensor([e for _, e in pairs], dtype=torch.int32).to(cache.device))
++        cache.num_indices.fill_(n)
++        cache._pending_src_layer = layer
++        cache._pending_whole_layer = False
++        cache.copy_missing()
++    cache.num_indices.fill_(0)
++    torch.cuda.synchronize(cache.device)
++    seconds = time.perf_counter() - start
++    row_bytes = sum(t.numel() * t.element_size() for t in cache.bank_caches.values()) // capacity
++    log = _control().get("log")
++    if log:
++        with open(log, "a") as stream:
++            stream.write(json.dumps({"prompt_touched": len(order), "seed_entries": len(chosen),
++                                     "seed_bytes": len(chosen) * row_bytes, "seed_seconds": seconds,
++                                     "layers_copied": len(rows)}) + "\n")
+diff -ruN -x __pycache__ -x '*.so' m_reduction_v3_live2_20261015T045932Z/python/freetoken/moe/routing_trace.py m_reduction_v3_live4_20261020T151654Z/python/freetoken/moe/routing_trace.py
+--- m_reduction_v3_live2_20261015T045932Z/python/freetoken/moe/routing_trace.py	2026-10-15 10:29:32.731423203 +0530
++++ m_reduction_v3_live4_20261020T151654Z/python/freetoken/moe/routing_trace.py	2026-10-17 08:27:59.090869077 +0530
+@@ -210,7 +210,9 @@
+         slots = cache.evict_slots[:q].cpu().tolist()
+         sources = cache.src_indices[:q].cpu().tolist()
+         old_ids = pending["old_ids"][slots].cpu().tolist() if slots else []
+-        missing = [e for e, s in zip(pending["raw_ids"], pending["slots_before"]) if s < 0]
++        # Distinct missing experts, as the kernel counts them: P7 arm 2 aliasing can route
++        # two logical experts to one physical representative within a top-k.
++        missing = list(dict.fromkeys(e for e, s in zip(pending["raw_ids"], pending["slots_before"]) if s < 0))
+         if int(cache.num_missing_full.item()) != len(missing):
+             raise RuntimeError("observed cache miss count disagrees with native hybrid kernel")
+         self.emit("cache", {"capture_id": self.capture_id, "request_id": self.metadata["request_id"],

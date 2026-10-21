@@ -1,0 +1,100 @@
+--- a/python/freetoken/moe/expert_banks.py
++++ b/python/freetoken/moe/expert_banks.py
+@@ -179,6 +179,8 @@
+ 
+ 
+ def _legacy_expert_banks(model_path, model_config, device, dtype, dummy, parallel, workers, chunk, decode_target="gpu", layer_sink=None) -> ExpertBanks:
++    if os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++        raise NotImplementedError("m-reduction expert merging is implemented for kernel-method banks only")
+     expert_quant = model_config.expert_quant
+     if expert_quant not in _PROVIDERS:
+         raise ValueError(
+@@ -201,6 +203,11 @@
+     pieces = iter_expert_pieces(
+         model_path, model_config, method.kind, parallel=parallel, workers=workers, chunk=chunk
+     )
++    if os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++        # m-reduction P7 arm 2: merge/requantize cluster representatives before packing.
++        from experiments.pruning.m_reduction_merge import wrap_pieces
++
++        pieces = wrap_pieces(pieces, method.cfg.num_experts)
+     return build_expert_banks(method, num_layers, pieces, device=device, layer_sink=layer_sink)
+ 
+ 
+--- a/python/freetoken/moe/routing_trace.py
++++ b/python/freetoken/moe/routing_trace.py
+@@ -320,3 +320,24 @@
+     if get_global_ctx().batch.is_prefill:
+         return logits
+     return logits.masked_fill(trace.mask[layer_id], float("-inf"))
++
++
++_ALIAS = None
++
++
++def alias_ids(layer_id, ids):
++    """P7 arm 2: map logical routed IDs to physical cluster representatives after native
++    top-k and effective weights (prefill and decode); identity when no merge is armed."""
++    global _ALIAS
++    path = os.getenv("FREETOKEN_M_REDUCTION_MERGE")
++    if not path:
++        return ids
++    if _ALIAS is None:
++        control = json.loads(Path(path).read_text())
++        layers = max(int(k) for k in control["usage"]) + 1
++        table = torch.arange(control["experts"], dtype=torch.int64).repeat(layers, 1)
++        for layer, mapping in control["alias"].items():
++            for logical, physical in mapping.items():
++                table[int(layer), int(logical)] = int(physical)
++        _ALIAS = table.to(ids.device)
++    return _ALIAS[layer_id][ids.long()].to(ids.dtype)
+--- a/python/freetoken/layers/moe.py
++++ b/python/freetoken/layers/moe.py
+@@ -242,6 +242,10 @@
+             topk=self.top_k,
+             renormalize=self.renormalize,
+         )
++        if os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++            from freetoken.moe.routing_trace import alias_ids
++
++            topk_ids = alias_ids(self.layer_id, topk_ids)
+         return self._decode_routed(hidden_states, topk_weights, topk_ids)
+ 
+     def prefill_forward(
+@@ -259,6 +263,10 @@
+             topk=self.top_k,
+             renormalize=self.renormalize,
+         )
++        if os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++            from freetoken.moe.routing_trace import alias_ids
++
++            topk_ids = alias_ids(self.layer_id, topk_ids)
+         return self._prefill_routed(hidden_states, topk_weights, topk_ids)
+ 
+     # ------------------------------------------------------------------
+--- a/python/freetoken/models/gpt_oss/moe.py
++++ b/python/freetoken/models/gpt_oss/moe.py
+@@ -37,6 +37,10 @@
+             observe_scores(self.layer_id, router_logits)
+             router_logits = mask_decode_logits(self.layer_id, router_logits)
+         topk_weights, topk_ids = _route(router_logits, self.top_k)
++        if os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++            from freetoken.moe.routing_trace import alias_ids
++
++            topk_ids = alias_ids(self.layer_id, topk_ids)
+         return self.routed_forward(hidden_states, topk_weights, topk_ids)
+ 
+ 
+--- a/python/freetoken/models/gemma4/moe.py
++++ b/python/freetoken/models/gemma4/moe.py
+@@ -84,6 +84,10 @@
+         shared = self.shared_mlp.forward(pre_ff)
+ 
+         topk_weights, topk_ids = self.router.forward(x)
++        if os.getenv("FREETOKEN_M_REDUCTION_MERGE"):
++            from freetoken.moe.routing_trace import alias_ids
++
++            topk_ids = alias_ids(self.router.layer_id, topk_ids)
+         routed_in = self.pre_feedforward_layernorm_2.forward(x)
+         # routed_forward may mutate the ids in place (offload decode slot remap);
+         # keep the router's output intact.

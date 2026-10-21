@@ -1,0 +1,280 @@
+--- a/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
++++ b/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
+@@ -289,6 +289,55 @@
+   return acc * global;
+ }
+ 
++// Opt-in NVFP4 precision arm: exact packed weights, FP64 accumulation.
++float dot_nvfp4_f64_scalar(const uint8_t* packed, const uint8_t* scale, float global,
++                           const float* xe, const float* xo, int K,
++                           const float* e2m1, const float* e4m3) {
++  double acc = 0.0;
++  for (int b = 0; b < K / 16; ++b) {
++    const double s = e4m3[scale[b]];
++    for (int j = 0; j < 8; ++j) {
++      const uint8_t byte = packed[(size_t)b * 8 + j];
++      acc += (double)e2m1[byte & 15] * s * (double)xe[(size_t)b * 8 + j];
++      acc += (double)e2m1[byte >> 4] * s * (double)xo[(size_t)b * 8 + j];
++    }
++  }
++  return static_cast<float>(acc * (double)global);
++}
++#if CPU_MOE_X86
++__attribute__((target("avx512f,avx2")))
++float dot_nvfp4_f64_avx512(const uint8_t* packed, const uint8_t* scale, float global,
++                           const float* xe, const float* xo, int K,
++                           const float* e2m1, const float* e4m3) {
++  __m512d even = _mm512_setzero_pd(), odd = _mm512_setzero_pd();
++  for (int b = 0; b < K / 16; ++b) {
++    __m256i byte = _mm256_cvtepu8_epi32(_mm_loadl_epi64(
++        reinterpret_cast<const __m128i*>(packed + (size_t)b * 8)));
++    __m256 low = _mm256_i32gather_ps(e2m1, _mm256_and_si256(byte, _mm256_set1_epi32(15)), 4);
++    __m256 high = _mm256_i32gather_ps(e2m1, _mm256_srli_epi32(byte, 4), 4);
++    __m512d s = _mm512_set1_pd(e4m3[scale[b]]);
++    even = _mm512_fmadd_pd(_mm512_mul_pd(_mm512_cvtps_pd(low), s),
++                          _mm512_cvtps_pd(_mm256_loadu_ps(xe + (size_t)b * 8)), even);
++    odd = _mm512_fmadd_pd(_mm512_mul_pd(_mm512_cvtps_pd(high), s),
++                         _mm512_cvtps_pd(_mm256_loadu_ps(xo + (size_t)b * 8)), odd);
++  }
++  return static_cast<float>(_mm512_reduce_add_pd(_mm512_add_pd(even, odd)) * (double)global);
++}
++#endif
++
++inline float nvfp4_precise_activation(int act, float gate) {
++  if (act == ACT_SILU) {
++    const float exponential = static_cast<float>(std::exp((double)-gate));
++    return gate / (1.0f + exponential);
++  }
++  if (act == ACT_GELU_TANH) {
++    const float inner = 0.79788456080286535588f * (gate + 0.044715f * gate * gate * gate);
++    const float t = static_cast<float>(std::tanh((double)inner));
++    return (0.5f * gate) * (1.0f + t);
++  }
++  throw std::runtime_error("NVFP4 precision arm supports silu/gelu_tanh only");
++}
++
+ // ---- NVFP4 W4A8 (int8 activations) dot: nibble->int8 via LUT, per-16 act scale ----
+ // asi8: int8 activations laid out per-16 block as [even(8), odd(8)]; asb[b] = per-block
+ // activation scale (absmax/127). Result folds the e2m1*2 -> *0.5 into the scale.
+@@ -1310,6 +1359,7 @@
+   bool use_q4a8 = false;       // q4_0: always W4A8 (llama.cpp Q4_0 x Q8_0); int8 pre-quant
+   dsdot_fn dsdot;
+   mxgemv_fn mxgemv;
++  bool nvfp4_align = false;
+   bool mxfp4_dot64 = false;
+   bool mxfp4_align = false;  // Opt-in ABI: FP32 partial output for MXFP4 only.
+   q4dot_fn q4dot;
+@@ -1674,7 +1724,11 @@
+           gemm1_dot(gate_up_l, gu_packed_l, gu_scale_l, gu_global_l, e, i, x_row, xe, xo, xi8, xas) * w_in;
+       float up = gemm1_dot(gate_up_l, gu_packed_l, gu_scale_l, gu_global_l, e, I + i, x_row,
+                            xe, xo, xi8, xas) * w_in;
+-      if (clamped) {
++      if (nvfp4_align) {
++        gate = bf16_to_f32(f32_to_bf16(gate));
++        up = bf16_to_f32(f32_to_bf16(up));
++        g_row[i] = f32_to_bf16(nvfp4_precise_activation(act, gate) * up);
++      } else if (clamped) {
+         // clamp(gate, max=lim) * sigmoid(alpha * gate) * (clamp(up, +-lim) + up_bias)
+         // -- swigluoai carries the +1 up bias (gpt-oss/MiniMax); swiglu_clamp
+         // (GLM-5.3) does not. lim == +inf: no clamp.
+@@ -1711,6 +1765,7 @@
+     bf16_t* y_row = t->y + (size_t)tok * H;
+     for (int h = h0; h < h1; ++h) {
+       float acc = 0.0f;
++      double precise_acc = 0.0;
+       for (int k = 0; k < top_k; ++k) {
+         const int e = t->ids[static_cast<size_t>(tok) * top_k + k];
+         if (e < 0 || e >= num_experts) continue;
+@@ -1723,10 +1778,12 @@
+         const float* gas = use_vnni ? gas_scratch.data() + gr * (I / 16)
+                          : use_q4a8 ? gas_scratch.data() + gr * (I / 32)
+                                       : nullptr;
+-        acc += gemm2_dot(down_l, dn_packed_l, dn_scale_l, dn_global_l, e, h, g_row, ge, go, gi8,
+-                         gas) * w_out;
++        const float weighted = gemm2_dot(down_l, dn_packed_l, dn_scale_l, dn_global_l, e, h, g_row, ge, go, gi8, gas) * w_out;
++        if (nvfp4_align) precise_acc += bf16_to_f32(f32_to_bf16(weighted));
++        else acc += weighted;
+       }
+-      y_row[h] = f32_to_bf16(acc);
++      if (nvfp4_align) reinterpret_cast<double*>(t->y)[(size_t)tok * H + h] = precise_acc;
++      else y_row[h] = f32_to_bf16(acc);
+     }
+   }
+ 
+@@ -2233,6 +2290,18 @@
+       .def("set_input_prequant",
+            [](CpuMoeExecutor& e, bool v) { e.input_prequant = v; },
+            py::arg("value"))
++      .def("set_nvfp4_alignment", [](CpuMoeExecutor& e) {
++        if (e.fmt != WF_NVFP4 || !e.owned_tasks.empty() || (e.act != ACT_SILU && e.act != ACT_GELU_TANH))
++          throw std::runtime_error("NVFP4 precision must be enabled before tasks for silu/gelu_tanh");
++        e.nvfp4_align = true;
++        e.use_vnni = false;
++        e.nvdot = dot_nvfp4_f64_scalar;
++#if CPU_MOE_X86
++        if (pick_isa() >= ISA_AVX512) e.nvdot = dot_nvfp4_f64_avx512;
++#endif
++        e.isa_str = std::string(select_dot().name) + "+nvfp4-fp64";
++        e.isa = e.isa_str.c_str();
++      })
+       .def("set_mxfp4_dot64", [](CpuMoeExecutor& e) {
+         if (e.fmt != WF_MXFP4 || !e.mxfp4_align || !e.owned_tasks.empty())
+           throw std::runtime_error("FP64 MXFP4 projection requires alignment before tasks");
+--- a/python/freetoken/kernel/triton/nvfp4_fused_moe.py
++++ b/python/freetoken/kernel/triton/nvfp4_fused_moe.py
+@@ -156,6 +156,7 @@
+     A_ROW_IS_ROUTE: tl.constexpr,
+     MUL_ROUTED_WEIGHT: tl.constexpr,
+     compute_type: tl.constexpr,
++    PRECISE: tl.constexpr,
+ ):
+     """Marlin-style NVFP4 decode GEMV: wide int32 weight loads + deferred reduction.
+ 
+@@ -186,7 +187,7 @@
+ 
+     offs_kw = tl.arange(0, BLOCK_SIZE_KW)
+     K_WORDS = K // 8
+-    partial = tl.zeros((BLOCK_SIZE_KW, BLOCK_SIZE_N), dtype=tl.float32)
++    partial = tl.zeros((BLOCK_SIZE_KW, BLOCK_SIZE_N), dtype=tl.float64 if PRECISE else tl.float32)
+ 
+     packed_slot = packed_ptr + slot * stride_pe
+     scale_slot = scale_ptr + slot * stride_se
+@@ -207,7 +208,7 @@
+             scale = e4m3_u8_to_f32(tl.load(s_ptrs, mask=s_mask, other=0))
+ 
+         kbase = 8 * widx
+-        acc_w = tl.zeros((BLOCK_SIZE_KW, BLOCK_SIZE_N), dtype=tl.float32)
++        acc_w = tl.zeros((BLOCK_SIZE_KW, BLOCK_SIZE_N), dtype=tl.float64 if PRECISE else tl.float32)
+         for j in tl.static_range(8):
+             code = (word >> (4 * j)) & 0xF
+             b = tl.load(lut_ptr + code)
+@@ -218,6 +219,8 @@
+     accumulator = tl.sum(partial, axis=0)
+     g = tl.load(global_ptr + slot * stride_ge + offs_n * stride_gn, mask=n_mask, other=0.0).to(tl.float32)
+     accumulator = accumulator * g
++    if PRECISE:
++        accumulator = accumulator.to(tl.float32)
+ 
+     if MUL_ROUTED_WEIGHT:
+         weight = tl.load(topk_weights_ptr + token_id * stride_tw_m + route_k * stride_tw_k)
+--- a/python/freetoken/kernel/triton/nvfp4_precision.py
++++ b/python/freetoken/kernel/triton/nvfp4_precision.py
+@@ -0,0 +1,28 @@
++"""Opt-in common CPU/GPU activation arithmetic for NVFP4 qualification."""
++import triton
++import triton.language as tl
++from triton.language.extra.cuda import libdevice
++
++
++@triton.jit
++def _activation(x, out, I: tl.constexpr, IN_STRIDE: tl.constexpr, OUT_STRIDE: tl.constexpr,
++                KIND: tl.constexpr, BLOCK: tl.constexpr):
++    row = tl.program_id(0)
++    offset = tl.program_id(1) * BLOCK + tl.arange(0, BLOCK)
++    gate = tl.load(x + row * IN_STRIDE + offset, mask=offset < I, other=0).to(tl.float32)
++    up = tl.load(x + row * IN_STRIDE + I + offset, mask=offset < I, other=0).to(tl.float32)
++    if KIND == 0:
++        e = libdevice.exp((-gate).to(tl.float64)).to(tl.float32)
++        activated = libdevice.div_rn(gate, 1.0 + e)
++    else:
++        inner = 0.79788456080286535588 * (gate + 0.044715 * gate * gate * gate)
++        t = libdevice.tanh(inner.to(tl.float64)).to(tl.float32)
++        activated = (0.5 * gate) * (1.0 + t)
++    tl.store(out + row * OUT_STRIDE + offset, activated * up, mask=offset < I)
++
++
++def precise_gated_activation(x, out, activation):
++    kind = {"silu": 0, "gelu_tanh": 2}[activation]
++    _activation[(out.shape[0], triton.cdiv(out.shape[1], 128))](
++        x, out, out.shape[1], x.stride(0), out.stride(0), KIND=kind, BLOCK=128,
++        enable_fp_fusion=False, num_warps=4)
+--- a/python/freetoken/layers/moe.py
++++ b/python/freetoken/layers/moe.py
+@@ -374,7 +374,7 @@
+             replay_events["gpu_end"].record()
+         cpu_routed = cpu_routed_early if not _HYBRID_OVERLAP else executor.decode_sync(pending)
+         result = gpu_routed + cpu_routed
+-        if getattr(executor, "_mxfp4_align", False):
++        if getattr(executor, "_mxfp4_align", False) or getattr(executor, "_nvfp4_align", False):
+             result = result.to(hidden_states.dtype)
+         if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
+             from freetoken.moe.routing_trace import observer
+--- a/python/freetoken/moe/cpu_executor.py
++++ b/python/freetoken/moe/cpu_executor.py
+@@ -190,6 +190,8 @@
+         self.top_k = int(top_k)
+         self.quant_format = fmt
+         self._mxfp4_align = fmt == "mxfp4_triton" and os.getenv("FREETOKEN_M_REDUCTION_MXFP4_ALIGN") == "1"
++        self._nvfp4_align = fmt == "nvfp4" and os.getenv("FREETOKEN_M_REDUCTION_NVFP4_ALIGN") == "1"
++        self._partial_dtype = torch.float64 if self._nvfp4_align else (torch.float32 if self._mxfp4_align else torch.bfloat16)
+         self.device = device
+         self.max_tokens = int(max_tokens)
+         self.apply_router_weight_on_input = bool(apply_router_weight_on_input)
+@@ -252,6 +254,10 @@
+                 if not hasattr(self._ext, "set_mxfp4_dot64"):
+                     raise RuntimeError("FP64 MXFP4 projection requires rebuilt extension")
+                 self._ext.set_mxfp4_dot64()
++        if self._nvfp4_align:
++            if not hasattr(self._ext, "set_nvfp4_alignment"):
++                raise RuntimeError("NVFP4 precision requires a rebuilt native extension")
++            self._ext.set_nvfp4_alignment()
+         self.num_threads = nthreads
+         self.core_ids = core_ids
+         self.isa = self._ext.isa_name()
+@@ -506,7 +512,7 @@
+                 "x": alloc_pinned_tensor(bs, self.H, dtype=torch.bfloat16),
+                 "ids": alloc_pinned_tensor(bs, self.top_k, dtype=torch.int32),
+                 "w": alloc_pinned_tensor(bs, self.top_k, dtype=torch.float32),
+-                "y": alloc_pinned_tensor(bs, self.H, dtype=torch.float32 if self._mxfp4_align else torch.bfloat16),
++                "y": alloc_pinned_tensor(bs, self.H, dtype=self._partial_dtype),
+             }
+             self._io[bs] = io
+         return io
+@@ -581,7 +587,7 @@
+         io["w"].copy_(topk_weights.to(torch.float32), non_blocking=True)
+ 
+         task = self._task_for(layer_id, bs)
+-        out = torch.empty_like(hidden_states, dtype=torch.float32 if self._mxfp4_align else hidden_states.dtype)
++        out = torch.empty_like(hidden_states, dtype=self._partial_dtype)
+         slot = self._flag_slots.get((layer_id, bs)) if self._flag_sync else None
+         if slot is not None:
+             # Front-end memops: done[slot]=0 then ready[slot]=1 (the coordinator's
+--- a/python/freetoken/moe/fused_nvfp4.py
++++ b/python/freetoken/moe/fused_nvfp4.py
+@@ -8,6 +8,7 @@
+ from __future__ import annotations
+ 
+ from typing import Any, Dict
++import os
+ 
+ import torch
+ import triton
+@@ -132,6 +133,7 @@
+         A_ROW_IS_ROUTE=a_row_is_route,
+         MUL_ROUTED_WEIGHT=mul_routed_weight,
+         compute_type=_tl_dtype(c.dtype),
++        PRECISE=os.getenv("FREETOKEN_M_REDUCTION_NVFP4_ALIGN") == "1",
+         num_warps=_DECODE_MARLIN_WARPS,
+     )
+ 
+@@ -167,12 +169,19 @@
+         ic1, topk_weights, topk_ids, apply_router_weight_on_input, False,
+     )
+     ic2 = torch.empty((M * top_k, inter), device=dev, dtype=dt)
+-    gated_act_and_mul(activation, ic1.view(-1, two_i), ic2, alpha=act_alpha, limit=act_limit)
++    precise = os.getenv("FREETOKEN_M_REDUCTION_NVFP4_ALIGN") == "1"
++    if precise:
++        from freetoken.kernel.triton.nvfp4_precision import precise_gated_activation
++        precise_gated_activation(ic1.view(-1, two_i), ic2, activation)
++    else:
++        gated_act_and_mul(activation, ic1.view(-1, two_i), ic2, alpha=act_alpha, limit=act_limit)
+     ic3 = torch.empty((M, top_k, H), device=dev, dtype=dt)
+     gemm_fn(
+         ic2, down_packed, down_scale, down_global,
+         ic3, topk_weights, topk_ids, not apply_router_weight_on_input, True,
+     )
++    if precise:
++        return ic3.double().sum(dim=1)
+     out = torch.empty_like(hidden_states)
+     moe_sum_reduce_triton(ic3, out)
+     return out

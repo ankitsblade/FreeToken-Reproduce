@@ -7,7 +7,7 @@ This experiment-only workspace combines local reproduction studies with experime
 - [Portable setup and reproduction](REPRODUCING.md): uv-only Bash entry points, baseline contracts, output layout and blocker handling.
 
 - [Experiment log](EXPERIMENT_LOG.md): the single maintained Markdown history for every study, qualification, failure, retry, and closeout.
-- [Remaining experiment plan](PLAN.md): the only maintained plan for unfinished work. Completed protocols describe what was measured; they are not pending launch queues.
+- [Detailed m-reduction experiment plan](PLAN.md): the only maintained plan for unfinished work, with P1–P9 parameters, pinned datasets, controls and execution gates. Completed protocols describe what was measured; they are not pending launch queues.
 - [Dataset and evaluation contract](experiments/pruning/dataset.md): calibration versus evaluation, template dependence, scoring rules, and limits of the synthetic inference study.
 
 ## Study reports
@@ -28,7 +28,7 @@ The baseline split-policy study and runtime-aware q study have different graph/e
 - The 75% actual-inference supplement completed **8 October 2026 at 12:45:37 IST**: 2,700 task generations, 1,800 fixed-input evaluations, 15 accepted GPT-OSS serving arms, ten accepted Qwen serving arms, and 44,155 verified artifacts.
 - GPT-OSS math/code and Qwen code passed the combined **synthetic-corpus** quality screen. Qwen mixed math lost 30 percentage points; Gemma mask decisions were inconclusive. End-to-end latency showed no general improvement.
 - The original requirement for 100 independent quality tasks per workload remains unmet. Ten families with ten variants are not 100 independent tasks.
-- The 60% and 50% ablations have not started. Kimi remains excluded at the user's request.
+- Kimi remains excluded at the user's request.
 - Runtime-aware q has not been validated on a second model/device or implemented as the measured device-side CUDA-graph policy.
 - Hardware-counter DRAM bandwidth and actual SM occupancy remain unmeasured in the local bandwidth study.
 

@@ -1,0 +1,77 @@
+{
+ "log": "results/policy_study/20261021T090614Z/runtime_q/results/stage1_lean_gpt_oss.csv",
+ "rows": 109728,
+ "median_ms": {
+  "pre_ms": 0.3303,
+  "pcie_ms": 0.0285,
+  "gemm_ms": 0.258,
+  "exposed_ms": 0.4096,
+  "wall_ms": 1.8657,
+  "host_gap": 0.0842
+ },
+ "decide_us_median": 177.3,
+ "cpu_bound_layers": 58976,
+ "cpu_bound_moe_obs_minus_cpu_task_ms": {
+  "0.1": -0.0347,
+  "0.5": -0.0185,
+  "0.9": 0.0001
+ },
+ "by_policy": {
+  "A0_qstar_paper": {
+   "rows": 26924,
+   "bias_ms": 0.0176,
+   "mae_ms": 0.0408,
+   "median_ape_pct": 4.03,
+   "fills_per_layer": 0.0711,
+   "fit_ms_median": {
+    "g0_ms": 0.3089,
+    "tp_ms": 1.8131,
+    "c0_ms": 0.0158,
+    "tc_ms": 0.3787,
+    "v_hit_ms": 0.3364
+   }
+  },
+  "A_qstar_paper_min1": {
+   "rows": 21455,
+   "bias_ms": -0.0261,
+   "mae_ms": 0.0274,
+   "median_ape_pct": 1.22,
+   "fills_per_layer": 1.0,
+   "fit_ms_median": {
+    "g0_ms": 0.2397,
+    "tp_ms": 1.9105,
+    "c0_ms": 0.1083,
+    "tc_ms": 0.378,
+    "v_hit_ms": 0.3393
+   }
+  },
+  "B_reuse_aware": {
+   "rows": 21476,
+   "bias_ms": 0.0103,
+   "mae_ms": 0.0444,
+   "median_ape_pct": 4.79,
+   "fills_per_layer": 0.195,
+   "fit_ms_median": {
+    "g0_ms": 0.2832,
+    "tp_ms": 1.8676,
+    "c0_ms": 0.0178,
+    "tc_ms": 0.3825,
+    "v_hit_ms": 0.295
+   }
+  },
+  "E_qstar_engine": {
+   "rows": 27432,
+   "bias_ms": 0.1766,
+   "mae_ms": 0.1866,
+   "median_ape_pct": 12.84,
+   "fills_per_layer": 0.0,
+   "fit_ms_median": {
+    "g0_ms": 0.0,
+    "tp_ms": 1.9756,
+    "c0_ms": 0.0,
+    "tc_ms": 0.4168,
+    "v_hit_ms": 0.4168
+   }
+  }
+ }
+}

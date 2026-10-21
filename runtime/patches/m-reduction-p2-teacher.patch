@@ -1,0 +1,248 @@
+diff -ru '--exclude=__pycache__' m_reduction_v3_nvfp4_precision_20261013T155751Z/python/freetoken/engine/engine.py m_reduction_v3_p2_20261014T122306Z/python/freetoken/engine/engine.py
+--- a/python/freetoken/engine/engine.py	2026-10-13 16:19:52.499719850 +0530
++++ b/python/freetoken/engine/engine.py	2026-10-14 17:54:16.660680423 +0530
+@@ -1052,7 +1052,7 @@
+         batch_logits = logits[: batch.size]
+         next_tokens_gpu = self.sampler.sample(batch_logits, args).to(torch.int32)
+         if route_observer is not None:
+-            route_observer.end_batch(next_tokens_gpu)
++            next_tokens_gpu = route_observer.end_batch(next_tokens_gpu, batch_logits)
+         next_tokens_cpu = next_tokens_gpu.to("cpu", non_blocking=True)
+         copy_done_event = torch.cuda.Event()
+         copy_done_event.record(self.stream)
+diff -ru '--exclude=__pycache__' m_reduction_v3_nvfp4_precision_20261013T155751Z/python/freetoken/layers/moe.py m_reduction_v3_p2_20261014T122306Z/python/freetoken/layers/moe.py
+--- a/python/freetoken/layers/moe.py	2026-10-13 21:29:32.864091350 +0530
++++ b/python/freetoken/layers/moe.py	2026-10-14 17:54:16.660897728 +0530
+@@ -287,7 +287,7 @@
+         if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
+             from freetoken.moe.routing_trace import observe_routes
+ 
+-            observe_routes(self, topk_weights, topk_ids, cache)
++            observe_routes(self, topk_weights, topk_ids, cache, hidden_states)
+         if cache.is_cpu_layer(self.layer_id):
+             executor = cache.cpu_executor
+             assert executor is not None, "CPU MoE executor was not initialized"
+diff -ru '--exclude=__pycache__' m_reduction_v3_nvfp4_precision_20261013T155751Z/python/freetoken/moe/routing_trace.py m_reduction_v3_p2_20261014T122306Z/python/freetoken/moe/routing_trace.py
+--- a/python/freetoken/moe/routing_trace.py	2026-10-13 16:27:29.455070711 +0530
++++ b/python/freetoken/moe/routing_trace.py	2026-10-14 17:54:16.659983609 +0530
+@@ -5,6 +5,7 @@
+ import os
+ from pathlib import Path
+ 
++import numpy as np
+ import torch
+ 
+ _ARM = os.getenv("FREETOKEN_MOE_ROUTING_ARM")
+@@ -23,13 +24,29 @@
+         self.pending_cache = None
+         self.cache_snapshot_written = False
+         self.latest_cache = None
++        self.binaries = {}
++        self.reference = None
++        self.next_step = 0
+ 
+     def close(self):
+         for stream in self.streams.values():
+             stream.close()
++        for handle in self.binaries.values():
++            handle.close()
+         self.streams = {}
++        self.binaries = {}
++        self.reference = None
+         self.batch = None
+ 
++    def write_rows(self, kind: str, tensor):
++        """Append raw native-dtype rows; the header records dtype/width for exact reloading."""
++        if kind not in self.binaries:
++            self.binaries[kind] = (Path(self.metadata["directory"]) / (kind + ".bin")).open("xb")
++            (Path(self.metadata["directory"]) / (kind + "_header.json")).write_text(json.dumps({
++                "dtype": str(tensor.dtype), "width": int(tensor.shape[-1]),
++                "itemsize": tensor.element_size(), "order": "chronological rows, C order"}) + "\n")
++        self.binaries[kind].write(tensor.detach().contiguous().cpu().view(torch.uint8).numpy().tobytes())
++
+     def emit(self, kind: str, row: dict):
+         self.streams[kind].write(json.dumps(row, allow_nan=False, separators=(",", ":")) + "\n")
+ 
+@@ -66,9 +83,20 @@
+                 (target / "expert_bank_residency.json").write_text(json.dumps({
+                     "layer_residency": residency, "quant_format": cache.quant_format,
+                     "semantics": "native cache residency labels from attached host banks"}) + "\n")
+-            self.streams = ({kind: (target / (kind + ".jsonl.partial")).open("x")
+-                             for kind in ("routes", "batches", "cache", "scores")}
++            kinds = ("routes", "batches", "cache", "scores") + (("teacher",) if "forced_tokens" in metadata else ())
++            if "forced_tokens" in metadata and not metadata.get("observe", True):
++                raise RuntimeError("teacher forcing requires an observed capture")
++            self.streams = ({kind: (target / (kind + ".jsonl.partial")).open("x") for kind in kinds}
+                             if metadata.get("observe", True) else {})
++            self.next_step = 0
++            reference = metadata.get("kl_reference")
++            if reference:
++                header = json.loads(Path(reference["header"]).read_text())
++                width = header["width"] * header["itemsize"]
++                rows = np.memmap(reference["path"], dtype=np.uint8, mode="r")
++                if rows.size % width:
++                    raise RuntimeError("reference logits file is not whole rows")
++                self.reference = {"rows": rows.reshape(-1, width), "dtype": getattr(torch, header["dtype"].split(".")[-1])}
+             self.chunk = {"prefill": 0, "decode": 0}
+             self.prompt_tokens = metadata["prompt_tokens"]
+             self.uid = req.uid
+@@ -90,6 +118,14 @@
+         ids = batch.input_ids.cpu().tolist()
+         if len(positions) != len(ids):
+             raise RuntimeError("input IDs and scheduler positions disagree")
++        frozen = metadata.get("prompt_token_ids")
++        forced = metadata.get("forced_tokens")
++        for position, token in zip(positions, ids):
++            if position < self.prompt_tokens:
++                if frozen is not None and frozen[position] != token:
++                    raise RuntimeError("prefill input differs from the frozen rendered prompt")
++            elif forced is not None and forced[position - self.prompt_tokens] != token:
++                raise RuntimeError("decode input differs from the forced continuation")
+         self.batch = {"capture_id": self.capture_id, "request_id": metadata["request_id"],
+                       "engine_uid": req.uid, "phase": batch.phase,
+                       "chunk_index": self.chunk[batch.phase], "input_positions": positions,
+@@ -106,9 +142,13 @@
+             (Path(metadata["directory"]) / "decode_initial_cache.json").write_text(json.dumps(state) + "\n")
+             self.cache_snapshot_written = True
+ 
+-    def observe(self, layer, weights, ids, cache):
++    def observe(self, layer, weights, ids, cache, hidden=None):
+         if self.batch is None:
+             return
++        if self.metadata.get("save_moe_inputs") and self.batch["phase"] == "decode":
++            if hidden is None or hidden.shape[0] != 1:
++                raise RuntimeError("decode MoE input capture requires one routed hidden row")
++            self.write_rows("moe_inputs", hidden)
+         raw_ids = ids.cpu().tolist()
+         raw_weights = weights.cpu().tolist()
+         positions = self.batch["input_positions"]
+@@ -167,19 +207,65 @@
+         self.latest_cache = cache
+         self.pending_cache = None
+ 
+-    def end_batch(self, next_tokens):
++    def teacher_step(self, logits, sampler_token):
++        """Score one forced target with the live full-vocabulary distribution."""
++        forced = self.metadata["forced_tokens"]
++        last = self.batch["input_positions"][-1]
++        if self.batch["phase"] == "prefill" and last != self.prompt_tokens - 1:
++            return None  # an intermediate prefill chunk scores nothing
++        step = last - self.prompt_tokens + 1
++        if step != self.next_step or step >= len(forced):
++            raise RuntimeError("teacher-forced steps are not contiguous")
++        self.next_step += 1
++        row = logits[0]
++        if self.metadata.get("save_logits"):
++            self.write_rows("logits", row.unsqueeze(0))
++        target = forced[step]
++        log_p = torch.log_softmax(row.double(), dim=-1)
++        result = {"step": step, "phase": self.batch["phase"], "input_position": last, "target": target,
++                  "sampler_token": sampler_token, "model_argmax": int(torch.argmax(row)),
++                  "nll": float(-log_p[target]), "entropy": float(-(log_p.exp() * log_p).nan_to_num().sum()),
++                  "logits_dtype": str(row.dtype), "vocab": int(row.shape[-1])}
++        if self.reference is not None:
++            if step >= self.reference["rows"].shape[0]:
++                raise RuntimeError("reference logits end before the forced continuation")
++            raw = torch.from_numpy(np.array(self.reference["rows"][step])).view(self.reference["dtype"])
++            base = raw.to(row.device)
++            if base.shape != row.shape:
++                raise RuntimeError("reference and live vocabularies differ")
++            log_b = torch.log_softmax(base.double(), dim=-1)
++            p_b = log_b.exp()
++            kl = torch.where(p_b > 0, p_b * (log_b - log_p), torch.zeros_like(p_b)).sum()
++            result.update({"kl_baseline_candidate": float(kl), "baseline_argmax": int(torch.argmax(base)),
++                           "top1_agree": int(torch.argmax(base)) == result["model_argmax"],
++                           "baseline_nll": float(-log_b[target]), "reference_identical": bool(torch.equal(base, row))})
++        self.emit("teacher", result)
++        return target
++
++    def end_batch(self, next_tokens, logits=None):
+         if self.batch is None:
+-            return
++            return next_tokens
+         if self.pending_cache is not None:
+             raise RuntimeError("cache observation was not completed")
+-        self.emit("batches", {**self.batch, "sampled_token_ids": next_tokens.cpu().tolist()})
++        sampler_tokens = next_tokens.cpu().tolist()
++        if "forced_tokens" in self.metadata:
++            if logits is None or len(sampler_tokens) != 1:
++                raise RuntimeError("teacher forcing requires one request's logits")
++            target = self.teacher_step(logits, sampler_tokens[0])
++            if target is not None:
++                next_tokens = torch.full_like(next_tokens, target)
++        self.emit("batches", {**self.batch, "sampled_token_ids": next_tokens.cpu().tolist(),
++                              "sampler_token_ids": sampler_tokens})
+         if self.latest_cache is not None:
+             state = {name: getattr(self.latest_cache, name).cpu().tolist() for name in
+                      ("slot_for_id", "id_of_slot", "usage", "step", "expert_recency")}
+             (Path(self.metadata["directory"]) / "decode_final_cache.json").write_text(json.dumps(state) + "\n")
+         for stream in self.streams.values():
+             stream.flush()
++        for handle in self.binaries.values():
++            handle.flush()
+         self.batch = None
++        return next_tokens
+ 
+ 
+ def observer():
+@@ -189,10 +275,10 @@
+     return _OBSERVER
+ 
+ 
+-def observe_routes(layer, weights, ids, cache=None):
++def observe_routes(layer, weights, ids, cache=None, hidden=None):
+     trace = observer()
+     if trace is not None:
+-        trace.observe(layer, weights, ids, cache)
++        trace.observe(layer, weights, ids, cache, hidden)
+ 
+ 
+ def observe_scores(layer_id, logits):
+diff -ru '--exclude=__pycache__' m_reduction_v3_nvfp4_precision_20261013T155751Z/python/freetoken/server/openai_api.py m_reduction_v3_p2_20261014T122306Z/python/freetoken/server/openai_api.py
+--- a/python/freetoken/server/openai_api.py	2026-09-22 13:58:29.000000000 +0530
++++ b/python/freetoken/server/openai_api.py	2026-10-14 17:53:23.707505191 +0530
+@@ -2,6 +2,7 @@
+ 
+ import asyncio
+ import json
++import os
+ import time
+ import uuid
+ from collections.abc import AsyncIterator, Callable
+@@ -402,7 +403,7 @@
+     except ValueError as exc:
+         return create_error_response(str(exc), param="max_tokens")
+ 
+-    prompts = [req.prompt] if isinstance(req.prompt, str) else req.prompt
++    prompts = [req.prompt] if isinstance(req.prompt, str) or _is_token_prompt(req.prompt) else req.prompt
+     assert isinstance(prompts, list)
+     if req.stream:
+         if len(prompts) != 1:
+@@ -650,7 +651,11 @@
+ 
+ def _completion_unsupported_reason(req: CompletionRequest) -> str | None:
+     if _is_token_prompt(req.prompt):
+-        return "OpenAI token-id prompt inputs are not supported; pass text prompt strings instead"
++        # m-reduction P2 feeds frozen rendered token IDs (one flat prompt) so teacher forcing
++        # never re-renders a chat template; every other caller keeps the native refusal.
++        if not (os.getenv("FREETOKEN_M_REDUCTION_TOKEN_PROMPTS") and all(isinstance(t, int) for t in req.prompt)
++                and not req.stream):
++            return "OpenAI token-id prompt inputs are not supported; pass text prompt strings instead"
+     if req.logprobs is not None:
+         return "logprobs is not supported"
+     if req.echo:
+diff -ru '--exclude=__pycache__' m_reduction_v3_nvfp4_precision_20261013T155751Z/python/freetoken/tokenizer/tokenize.py m_reduction_v3_p2_20261014T122306Z/python/freetoken/tokenizer/tokenize.py
+--- a/python/freetoken/tokenizer/tokenize.py	2026-09-22 13:58:29.000000000 +0530
++++ b/python/freetoken/tokenizer/tokenize.py	2026-10-14 17:53:23.707675667 +0530
+@@ -63,6 +63,11 @@
+         results: List[UserMsg] = []
+         # TODO: batch tokenization
+         for msg in msgs:
++            if isinstance(msg.text, list) and msg.text and all(isinstance(t, int) for t in msg.text):
++                # Frozen token-ID prompt (m-reduction P2 only; the API refuses it otherwise).
++                results.append(UserMsg(uid=msg.uid, input_ids=torch.tensor(msg.text, dtype=torch.int32),
++                                       sampling_params=msg.sampling_params))
++                continue
+             prompt = self.render_prompt(msg)
+             # A jinja chat template owns every special token (HF's apply_chat_template
+             # tokenizes with add_special_tokens=False for the same reason): tokenizers

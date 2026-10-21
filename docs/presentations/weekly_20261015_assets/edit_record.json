@@ -1,0 +1,32 @@
+{
+  "source": "docs/presentations/FreeToken_Weekly_Progress_08-10-2026_with_static_pruning.pptx",
+  "source_sha256": "ad98714e7619777a387b9cbb44e0eec10ac1d528e4a4528425cd630eb73cbaae",
+  "output": "docs/presentations/FreeToken_Weekly_Progress_15-10-2026.pptx",
+  "output_sha256": "9b8e988cf07a24bb0852421a47d2bc08ff32b5dfc1ac59f7b3168a6dcccd225e",
+  "slides": 23,
+  "data_sources": [
+    "results/m_reduction/offline_stage1_20261014T200452Z/gemma_nvfp4/p3/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gemma_nvfp4/p4/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gemma_nvfp4/p5/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gemma_nvfp4/p6/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gemma_nvfp4/p7/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gemma_nvfp4/p9/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gpt_oss_mxfp4/p3/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gpt_oss_mxfp4/p4/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gpt_oss_mxfp4/p5/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gpt_oss_mxfp4/p6/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gpt_oss_mxfp4/p7/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/gpt_oss_mxfp4/p9/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/qwen_nvfp4/p3/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/qwen_nvfp4/p4/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/qwen_nvfp4/p5/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/qwen_nvfp4/p6/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/qwen_nvfp4/p7/summary.json",
+    "results/m_reduction/offline_stage1_20261014T200452Z/qwen_nvfp4/p9/summary.json",
+    "results/m_reduction/stage2_live_20261015T042628Z/p1_seed/gemma_nvfp4/summary.json",
+    "results/m_reduction/stage2_live_20261015T042628Z/p1_seed/gpt_oss_mxfp4/summary.json",
+    "results/m_reduction/stage2_live_20261015T042628Z/p1_seed/qwen_nvfp4/summary.json"
+  ],
+  "templates": "slide parts cloned from the 8 October deck; masters, layouts, theme and fonts byte-identical",
+  "figures": "PNG in slides; PNG/SVG/PDF and plotted values (chart_source_rows.json) beside this script"
+}

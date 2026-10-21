@@ -17,6 +17,16 @@ if [[ $(uname -s) != Linux || $(uname -m) != x86_64 ]]; then
   echo 'This reproduction runtime is qualified only for Linux x86_64.' >&2
   exit 1
 fi
+export UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-300}"
+export UV_HTTP_RETRIES="${UV_HTTP_RETRIES:-5}"
+export UV_CONCURRENT_DOWNLOADS="${UV_CONCURRENT_DOWNLOADS:-4}"
+setup_log_root="$EXPERIMENT_REPO_ROOT/results/setup"
+mkdir -p "$setup_log_root"
+setup_log_dir="$(mktemp -d "$setup_log_root/$(date -u +%Y%m%dT%H%M%SZ)_XXXXXX")"
+exec > >(tee -a "$setup_log_dir/setup.log") 2>&1
+trap 'setup_exit_code=$?; printf "%s\n" "$setup_exit_code" > "$setup_log_dir/exit_code"' EXIT
+echo "Setup log: $setup_log_dir/setup.log"
+echo "uv downloads: HTTP read timeout ${UV_HTTP_TIMEOUT}s, retries $UV_HTTP_RETRIES, concurrency $UV_CONCURRENT_DOWNLOADS"
 uv sync --project "$EXPERIMENT_REPO_ROOT" --locked --inexact
 if ((analysis_only)); then
   echo 'Analysis environment ready. CUDA inference dependencies were not installed.'

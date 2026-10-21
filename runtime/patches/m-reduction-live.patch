@@ -1,0 +1,294 @@
+--- a/python/freetoken/moe/offload_kernels.py
++++ b/python/freetoken/moe/offload_kernels.py
+@@ -20,6 +20,38 @@
+ if _HYBRID_FILL_FLOOR not in (0, 1):
+     raise ValueError("m-reduction fill floor must be zero or one")
+ 
++# m-reduction live replacement arms (P5 per-layer quotas, P9 segmented LRU). The control
++# JSON is {"kind": "lru"} | {"kind": "quota", "quotas": [c_l]} | {"kind": "slru",
++# "fraction": f}; victim order mirrors experiments/pruning/m_reduction_sim.CacheSim.
++_REPLACEMENT_PATH = os.getenv("FREETOKEN_M_REDUCTION_REPLACEMENT")
++_REPLACEMENT_IDS = {"lru": 0, "quota": 1, "slru": 2}
++
++
++def _attach_replacement(cache) -> None:
++    import json
++    import math
++
++    with open(_REPLACEMENT_PATH) as stream:
++        control = json.load(stream)
++    kind = _REPLACEMENT_IDS[control["kind"]]
++    quotas = control.get("quotas") or [0] * cache.num_layers
++    if kind == 1 and (len(quotas) != cache.num_layers or sum(quotas) != cache.cache_size
++                      or min(quotas) < int(control["top_k"]) or max(quotas) > cache.num_experts):
++        # c_l >= k guarantees a legal victim for every admission (no break in-kernel).
++        raise ValueError("quota vector must have k <= c_l <= E per layer and sum to cache_size")
++    cache.m_reduction_replacement = kind
++    cache.m_reduction_quota = torch.tensor(quotas, dtype=torch.int32, device=cache.device)
++    cache.m_reduction_segment = torch.zeros(cache.cache_size, dtype=torch.int32, device=cache.device)
++    cache.m_reduction_segment_time = torch.zeros(cache.cache_size, dtype=torch.int64, device=cache.device)
++    cache.m_reduction_protected_cap = (
++        int(math.floor(float(control["fraction"]) * cache.cache_size)) if kind == 2 else 0)
++
++
++def reset_replacement(cache) -> None:
++    if hasattr(cache, "m_reduction_replacement"):
++        cache.m_reduction_segment.zero_()
++        cache.m_reduction_segment_time.zero_()
++
+ 
+ def ensure_experts(cache, layer_id: int, expert_ids: torch.Tensor) -> None:
+     """Make this layer's routed experts resident; rewrite ``expert_ids`` to slot ids.
+@@ -62,9 +94,13 @@
+         from experiments.pruning.m_reduction_policy import before_hybrid
+ 
+         max_fetch, fetch_fraction = before_hybrid(cache, layer_id, expert_ids, max_fetch, fetch_fraction)
++    if _REPLACEMENT_PATH and not hasattr(cache, "m_reduction_replacement"):
++        _attach_replacement(cache)
+     # Q16 fixed point so the GPU kernel and the CPU reference cap identically (no float).
+     frac_q16 = min(1 << 16, max(0, round(fetch_fraction * (1 << 16))))
+     if not expert_ids.is_cuda:
++        if getattr(cache, "m_reduction_replacement", 0):
++            raise RuntimeError("m-reduction replacement arms are GPU-kernel only")
+         return _ensure_experts_hybrid_cpu(cache, layer_id, expert_ids, max_fetch, frac_q16)
+     _ensure_experts_hybrid_gpu(cache, layer_id, expert_ids, max_fetch, frac_q16)
+ 
+@@ -133,6 +169,11 @@
+         FETCH_PRIORITY=getattr(cache, "m_reduction_priority", None) is not None,
+         FILL_FLOOR=_HYBRID_FILL_FLOOR,
+         BY_RECENCY=_HYBRID_FETCH_BY_RECENCY,
++        quota_ptr=getattr(cache, "m_reduction_quota", cache.num_indices),
++        segment_ptr=getattr(cache, "m_reduction_segment", cache.num_indices),
++        segment_time_ptr=getattr(cache, "m_reduction_segment_time", cache.num_indices),
++        protected_cap=getattr(cache, "m_reduction_protected_cap", 0),
++        REPLACEMENT=getattr(cache, "m_reduction_replacement", 0),
+         num_warps=num_warps,
+     )
+ 
+@@ -332,6 +373,11 @@
+     priority_ptr,
+     FETCH_PRIORITY: tl.constexpr,
+     FILL_FLOOR: tl.constexpr,
++    quota_ptr,
++    segment_ptr,
++    segment_time_ptr,
++    protected_cap,
++    REPLACEMENT: tl.constexpr,
+ ):
+     """Capped-fetch timestamp-LRU (hybrid backend).
+ 
+@@ -380,6 +426,30 @@
+     tl.store(num_indices_ptr, num_fetch.to(tl.int64))
+     is_hit = is_active & (slot >= 0)
+     tl.store(usage_ptr + slot, step, mask=is_hit)
++    if REPLACEMENT == 2:
++        # SLRU hits, in routed order: refresh segment time; a probation hit is promoted,
++        # demoting the protected entry with the oldest segment time (ties -> lower slot)
++        # while the protected segment exceeds its cap.
++        off_h = tl.arange(0, BLOCK_C)
++        h_mask = off_h < cache_size
++        for i in tl.range(num_active):
++            e_hit = tl.load(expert_ids_ptr + i)
++            s_hit = tl.load(slot_for_id_ptr + base + e_hit)
++            if s_hit >= 0:
++                tl.store(segment_time_ptr + s_hit, step)
++                if tl.load(segment_ptr + s_hit) == 0:
++                    tl.store(segment_ptr + s_hit, 1)
++                    tl.debug_barrier()
++                    seg_v = tl.load(segment_ptr + off_h, mask=h_mask, other=0)
++                    if tl.sum(seg_v) > protected_cap:
++                        st_v = tl.load(segment_time_ptr + off_h, mask=h_mask, other=0).to(tl.int64)
++                        key_v = tl.where((seg_v == 1) & h_mask, st_v, 9223372036854775807)
++                        demoted = tl.argmin(key_v, axis=0).to(tl.int32)
++                        tl.store(segment_ptr + demoted, 0)
++                        tl.store(segment_time_ptr + demoted, step)
++                    tl.debug_barrier()
++    if REPLACEMENT != 0:
++        tl.debug_barrier()
+ 
+     # Fetch-selection priority: encode (recency desc, id asc) into one strictly-ordered
+     # score so argmax has no ties (rec deltas are multiples of num_experts; the id term
+@@ -406,9 +476,23 @@
+         for i in tl.range(num_active):
+             ei = tl.load(expert_ids_ptr + i)
+             owner_active = owner_active | (oid == base + ei)
++        if REPLACEMENT == 2:
++            seg = tl.load(segment_ptr + off_c, mask=c_mask, other=0)
++            st = tl.load(segment_time_ptr + off_c, mask=c_mask, other=0).to(tl.int64)
++            u = tl.where(seg == 1, st + 1152921504606846976, st)
+         u = tl.where(owner_active | (~c_mask), 9223372036854775807, u)
++        if REPLACEMENT == 1:
++            quota = tl.load(quota_ptr + layer_id)
+         for i in tl.range(num_fetch):
+-            victim = tl.argmin(u, axis=0).to(tl.int32)
++            if REPLACEMENT == 1:
++                # Per-layer quotas: below quota take a free slot, at quota replace this
++                # layer's own LRU entry; other layers' slots are never borrowed.
++                mine = (oid >= base) & (oid < base + num_experts)
++                legal = tl.where(tl.sum(mine.to(tl.int32)) < quota, oid < 0, mine)
++                u_pick = tl.where(legal, u, 9223372036854775807)
++            else:
++                u_pick = u
++            victim = tl.argmin(u_pick, axis=0).to(tl.int32)
+             old_id = tl.sum(tl.where(off_c == victim, oid, 0))
+             if old_id >= 0:
+                 tl.store(slot_for_id_ptr + old_id, -1)
+@@ -423,6 +507,11 @@
+             tl.store(evict_slots_ptr + i, victim)
+             tl.store(src_indices_ptr + i, e)  # layer-local row
+             u = tl.where(off_c == victim, 9223372036854775807, u)
++            if REPLACEMENT == 1:
++                oid = tl.where(off_c == victim, base + e, oid)
++            if REPLACEMENT == 2:
++                tl.store(segment_ptr + victim, 0)
++                tl.store(segment_time_ptr + victim, step)
+ 
+     # ---- Phase 3: rewrite expert_ids -> slot id (hit/fetched) or -1 (overflow -> CPU) ----
+     for i in tl.range(num_active):
+--- a/python/freetoken/moe/offload_cache.py
++++ b/python/freetoken/moe/offload_cache.py
+@@ -908,6 +908,9 @@
+         # Per-expert recency is not cache_size-shaped, so reset_cache leaves it alone; wipe
+         # it here so a new sequence starts with cold hybrid fetch priorities.
+         self.expert_recency.fill_(-1)
++        from freetoken.moe.offload_kernels import reset_replacement
++
++        reset_replacement(self)
+         if os.getenv("FREETOKEN_M_REDUCTION_POLICY"):
+             from experiments.pruning.m_reduction_policy import reset_policy
+ 
+--- a/python/freetoken/moe/routing_trace.py
++++ b/python/freetoken/moe/routing_trace.py
+@@ -27,6 +27,8 @@
+         self.binaries = {}
+         self.reference = None
+         self.next_step = 0
++        self.mask = None
++        self.token_log = None
+ 
+     def close(self):
+         for stream in self.streams.values():
+@@ -37,6 +39,10 @@
+         self.binaries = {}
+         self.reference = None
+         self.batch = None
++        self.mask = None
++        if self.token_log is not None:
++            self.token_log.close()
++            self.token_log = None
+ 
+     def write_rows(self, kind: str, tensor):
+         """Append raw native-dtype rows; the header records dtype/width for exact reloading."""
+@@ -77,6 +83,16 @@
+                 if len(residency) != cache.num_layers or any(value != "pinned" for value in residency):
+                     raise RuntimeError("routing qualification requires pinned expert banks in every layer")
+             cache.reset()
++            if metadata.get("decode_mask"):
++                # P7 decode exclusion: {"layers": {"<layer>": [expert, ...]}} masked to -inf
++                # before native top-k on decode tokens only; prefill stays native.
++                spec = json.loads(Path(metadata["decode_mask"]).read_text())
++                mask = torch.zeros((cache.num_layers, cache.num_experts), dtype=torch.bool)
++                for layer, experts in spec["layers"].items():
++                    mask[int(layer), experts] = True
++                if bool(mask.all(dim=1).any()):
++                    raise RuntimeError("decode mask removes every expert of a layer")
++                self.mask = mask.to(cache.device)
+             target = Path(metadata["directory"])
+             target.mkdir(parents=True, exist_ok=True)
+             if metadata.get("require_pinned_banks") and metadata.get("observe", True):
+@@ -88,6 +104,9 @@
+                 raise RuntimeError("teacher forcing requires an observed capture")
+             self.streams = ({kind: (target / (kind + ".jsonl.partial")).open("x") for kind in kinds}
+                             if metadata.get("observe", True) else {})
++            if metadata.get("record_tokens") and not metadata.get("observe", True):
++                # Lean timing arms: only "phase token" lines, for output identity.
++                self.token_log = (target / "sampled_tokens.txt").open("x")
+             self.next_step = 0
+             reference = metadata.get("kl_reference")
+             if reference:
+@@ -113,6 +132,7 @@
+         if req.uid != self.uid:
+             raise RuntimeError("armed capture spans more than one scheduler request")
+         if not metadata.get("observe", True):
++            self.token_phase = batch.phase
+             return
+         positions = batch.positions.cpu().tolist()
+         ids = batch.input_ids.cpu().tolist()
+@@ -244,6 +264,9 @@
+ 
+     def end_batch(self, next_tokens, logits=None):
+         if self.batch is None:
++            if self.token_log is not None:
++                self.token_log.write(f"{self.token_phase} {int(next_tokens[0])}\n")
++                self.token_log.flush()
+             return next_tokens
+         if self.pending_cache is not None:
+             raise RuntimeError("cache observation was not completed")
+@@ -285,3 +308,15 @@
+     trace = observer()
+     if trace is not None:
+         trace.observe_scores(layer_id, logits)
++
++
++def mask_decode_logits(layer_id, logits):
++    """Apply the armed request's P7 decode mask; identity when none is armed or in prefill."""
++    trace = observer()
++    if trace is None or trace.mask is None:
++        return logits
++    from freetoken.core import get_global_ctx
++
++    if get_global_ctx().batch.is_prefill:
++        return logits
++    return logits.masked_fill(trace.mask[layer_id], float("-inf"))
+--- a/python/freetoken/layers/moe.py
++++ b/python/freetoken/layers/moe.py
+@@ -232,7 +232,10 @@
+         if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
+             from freetoken.moe.routing_trace import observe_scores
+ 
++            from freetoken.moe.routing_trace import mask_decode_logits
++
+             observe_scores(self.layer_id, router_logits)
++            router_logits = mask_decode_logits(self.layer_id, router_logits)
+         topk_weights, topk_ids = fused_topk(
+             hidden_states=hidden_states,
+             gating_output=router_logits,
+--- a/python/freetoken/models/gpt_oss/moe.py
++++ b/python/freetoken/models/gpt_oss/moe.py
+@@ -32,9 +32,10 @@
+     def forward(self, hidden_states: torch.Tensor, router_logits: torch.Tensor | None = None):
+         assert router_logits is not None
+         if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
+-            from freetoken.moe.routing_trace import observe_scores
++            from freetoken.moe.routing_trace import mask_decode_logits, observe_scores
+ 
+             observe_scores(self.layer_id, router_logits)
++            router_logits = mask_decode_logits(self.layer_id, router_logits)
+         topk_weights, topk_ids = _route(router_logits, self.top_k)
+         return self.routed_forward(hidden_states, topk_weights, topk_ids)
+ 
+--- a/python/freetoken/models/gemma4/moe.py
++++ b/python/freetoken/models/gemma4/moe.py
+@@ -46,6 +46,9 @@
+                                      "scale_dtype": str(self.per_expert_scale.dtype),
+                                      "per_expert_scale": self.per_expert_scale.float().cpu().tolist()}
+                     target.write_text(json.dumps(metadata) + "\n")
++            from freetoken.moe.routing_trace import mask_decode_logits
++
++            logits = mask_decode_logits(self.layer_id, logits)
+         return self.gemma4_fused_routing(
+             logits,
+             self.per_expert_scale,
+--- a/python/freetoken/server/openai_api.py
++++ b/python/freetoken/server/openai_api.py
+@@ -653,8 +653,8 @@
+     if _is_token_prompt(req.prompt):
+         # m-reduction P2 feeds frozen rendered token IDs (one flat prompt) so teacher forcing
+         # never re-renders a chat template; every other caller keeps the native refusal.
+-        if not (os.getenv("FREETOKEN_M_REDUCTION_TOKEN_PROMPTS") and all(isinstance(t, int) for t in req.prompt)
+-                and not req.stream):
++        # Streaming is allowed so live timing can record first-token latency.
++        if not (os.getenv("FREETOKEN_M_REDUCTION_TOKEN_PROMPTS") and all(isinstance(t, int) for t in req.prompt)):
+             return "OpenAI token-id prompt inputs are not supported; pass text prompt strings instead"
+     if req.logprobs is not None:
+         return "logprobs is not supported"

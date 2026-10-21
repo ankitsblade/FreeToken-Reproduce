@@ -1,0 +1,736 @@
+{
+ "groups": [
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "problem": 0,
+   "prompts": "saketh_exp_2/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 6,
+   "burnin": 3,
+   "hook": "saketh_exp_2/policy/sx2_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1,
+    "TZ": "Etc/UTC"
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.17276
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "A0_qstar_paper_nomin",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.17276
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "E_qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    }
+   ]
+  },
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "problem": 1,
+   "prompts": "saketh_exp_2/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 6,
+   "burnin": 3,
+   "hook": "saketh_exp_2/policy/sx2_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1,
+    "TZ": "Etc/UTC"
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.17276
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "A0_qstar_paper_nomin",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.17276
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "E_qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    }
+   ]
+  },
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "problem": 2,
+   "prompts": "saketh_exp_2/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 6,
+   "burnin": 3,
+   "hook": "saketh_exp_2/policy/sx2_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1,
+    "TZ": "Etc/UTC"
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.17276
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "A0_qstar_paper_nomin",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.17276
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "E_qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/main_lean_gemma.csv",
+     "log_rep": 5
+    }
+   ]
+  },
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "problem": 0,
+   "prompts": "saketh_exp_2/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 5,
+   "burnin": 2,
+   "hook": "none",
+   "reset": "rebuild",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1,
+    "TZ": "Etc/UTC"
+   },
+   "episodes": [
+    {
+     "name": "E_qstar_engine_nohook",
+     "spec": {
+      "kind": "native"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "problem": 1,
+   "prompts": "saketh_exp_2/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 5,
+   "burnin": 2,
+   "hook": "none",
+   "reset": "rebuild",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1,
+    "TZ": "Etc/UTC"
+   },
+   "episodes": [
+    {
+     "name": "E_qstar_engine_nohook",
+     "spec": {
+      "kind": "native"
+     }
+    }
+   ]
+  },
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "problem": 2,
+   "prompts": "saketh_exp_2/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 5,
+   "burnin": 2,
+   "hook": "none",
+   "reset": "rebuild",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1,
+    "TZ": "Etc/UTC"
+   },
+   "episodes": [
+    {
+     "name": "E_qstar_engine_nohook",
+     "spec": {
+      "kind": "native"
+     }
+    }
+   ]
+  }
+ ]
+}

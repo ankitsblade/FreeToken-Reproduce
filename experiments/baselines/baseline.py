@@ -23,6 +23,7 @@ def main():
     p.add_argument("--cache-slots", type=int)
     p.add_argument("--memory-ratio", type=float)
     p.add_argument("--cpu-threads", type=int, default=5)
+    p.add_argument("--calibration", type=Path)
     p.add_argument("--allow-unpinned", action="store_true")
     p.add_argument("--dry-run", action="store_true")
     a = p.parse_args()
@@ -40,7 +41,8 @@ def main():
     if a.cpu_threads < 1:
         p.error("cpu-threads must be positive")
     profile["cpu_threads"] = a.cpu_threads
-    actual = (text["num_hidden_layers"], text.get("num_experts", text.get("num_local_experts")), text["num_experts_per_tok"])
+    actual = (text["num_hidden_layers"], text.get("num_experts", text.get("num_local_experts")),
+              text.get("num_experts_per_tok", text.get("top_k_experts")))
     expected = tuple(profile[k] for k in ("layers", "experts", "top_k"))
     if actual != expected:
         p.error(f"Checkpoint geometry {actual} differs from {expected}")
@@ -66,15 +68,55 @@ def main():
     run = Path(os.environ["EXPERIMENT_RUN_DIR"])
     env = {k: v for k, v in os.environ.items() if not k.startswith(("FREETOKEN_MOE_", "FREETOKEN_PRUNING_", "FREETOKEN_HYBRID_"))}
     env.pop("FREETOKEN_BENCHBW_PATH", None)
+    numeric = {"mxfp4_alignment": env.get("FREETOKEN_M_REDUCTION_MXFP4_ALIGN") == "1",
+               "mxfp4_dot64": env.get("FREETOKEN_M_REDUCTION_MXFP4_DOT64") == "1",
+               "nvfp4_alignment": env.get("FREETOKEN_M_REDUCTION_NVFP4_ALIGN") == "1"}
+    if numeric["nvfp4_alignment"] and a.profile == "gpt_oss_mxfp4":
+        p.error("NVFP4 alignment cannot be used for GPT-OSS")
+    calibration = a.calibration
+    if calibration is None and any(numeric.values()):
+        # Bind already running recovery controllers to their recorded fresh profile.
+        runs_root = Path(env.get("EXPERIMENT_RUNS_ROOT", ""))
+        recovery = runs_root.parent / "recovery_controller.json"
+        if recovery.is_file():
+            control = json.loads(recovery.read_text())
+            if control["runtime"] != env.get("FREETOKEN_SOURCE_DIR"):
+                p.error("Recovery baseline runtime differs from its controller")
+            candidates = []
+            for path in (runs_root.parent / "calibration").glob("*.control.json"):
+                row = json.loads(path.read_text())
+                if row.get("model") == a.profile and all(row.get(k, False) == v for k, v in numeric.items()):
+                    candidates.append(path.with_name(path.name.removesuffix(".control.json") + ".json"))
+            if len(candidates) == 1:
+                calibration = candidates[0]
+        if calibration is None:
+            p.error("A numerical correction baseline requires --calibration from that arm")
+    if calibration is not None:
+        calibration = calibration.expanduser().resolve()
+        if not calibration.is_file():
+            p.error("Calibration profile is missing")
+        if any(numeric.values()):
+            controls = calibration.with_suffix(".control.json")
+            if not controls.is_file():
+                p.error("A numerical correction requires its calibration control file")
+            controls = json.loads(controls.read_text())
+            if controls.get("model") != a.profile or any(controls.get(k, False) != v for k, v in numeric.items()):
+                p.error("Calibration model/precision differs from the baseline arm")
+        env["FREETOKEN_BENCHBW_PATH"] = str(calibration)
     env["FREETOKEN_DISABLE_OVERLAP_SCHEDULING"] = "1"
     env["MALLOC_ARENA_MAX"] = "2"
     env["OMP_NUM_THREADS"] = "1"
     env["MKL_NUM_THREADS"] = "1"
     record = {"profile": a.profile, "settings": profile, "model": str(model), "config": config,
+              "numeric_controls": numeric,
+              "calibration": str(calibration) if calibration else None,
+              "calibration_sha256": hashlib.sha256(calibration.read_bytes()).hexdigest() if calibration else None,
               "expected_checkpoint": pinned, "observed_config_revision": revision,
               "revision_verified": revision == pinned["revision"],
               "config_sha256": hashlib.sha256((model / "config.json").read_bytes()).hexdigest(),
               "prompt_sha256": hashlib.sha256((ROOT / "experiments/prompts/routing_workloads.jsonl").read_bytes()).hexdigest(),
+              "source_sha256": {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                for path in (Path(__file__), ROOT / "experiments/baselines/bench_decode_moe.py")},
               "repeats": a.repeats, "commands": [], "status": "running",
               "interpretation": "New-device unpruned baseline; no numerical equivalence to sealed 75% serving arms asserted"}
     metadata_files = ("generation_config.json", "tokenizer_config.json", "model.safetensors.index.json")

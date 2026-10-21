@@ -21,10 +21,17 @@ def probe(*command):
         return {"command": list(command), "error": str(exc)}
 
 
+def recorded_environment_value(key, value):
+    # The engine's name contains TOKEN; inspect the setting name after its prefix.
+    setting = key.removeprefix("FREETOKEN_").upper()
+    return "<redacted>" if any(word in setting for word in
+                               ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH")) else value
+
+
 def collect(runtime=False):
     record = {"utc": datetime.now(timezone.utc).isoformat(), "platform": platform.platform(),
               "machine": platform.machine(), "python": sys.version, "repo": str(ROOT),
-              "engine_source": str(ENGINE_SOURCE), "environment": {k: ("<redacted>" if any(word in k.upper() for word in ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH")) else v) for k, v in os.environ.items()
+              "engine_source": str(ENGINE_SOURCE), "environment": {k: recorded_environment_value(k, v) for k, v in os.environ.items()
                   if k.startswith(("FREETOKEN_", "OMP_", "MKL_", "CUDA_", "EXPERIMENT_"))},
               "gpu": probe("nvidia-smi", "--query-gpu=index,uuid,name,memory.total,memory.free,driver_version", "--format=csv"),
               "compute_processes": probe("nvidia-smi", "--query-compute-apps=gpu_uuid,pid,process_name,used_memory", "--format=csv"),

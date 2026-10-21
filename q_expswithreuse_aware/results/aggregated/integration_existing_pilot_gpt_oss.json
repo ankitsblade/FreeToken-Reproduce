@@ -1,0 +1,43 @@
+{
+ "log": "results/reuse_aware_v2/pilot_20261020T140940Z/runtime_q/results/lean_gpt_oss.csv",
+ "rows": 73152,
+ "decisions_vs_own_rule": {
+  "reuse_aware_lean": {
+   "rows": 12192,
+   "mismatch": 0,
+   "fetching_rows": 1786
+  },
+  "ra_v1_cost": {
+   "rows": 12192,
+   "mismatch": 0,
+   "fetching_rows": 983
+  },
+  "ra_v2_alpha": {
+   "rows": 12192,
+   "mismatch": 0,
+   "fetching_rows": 3052
+  },
+  "ra_v3_evict": {
+   "rows": 12192,
+   "mismatch": 0,
+   "fetching_rows": 694
+  }
+ },
+ "victims": {
+  "layers_with_fills": 7505,
+  "exact_match": 7496,
+  "match_rate": 0.998801,
+  "free_slot_fills": 1299,
+  "by_policy": {
+   "qstar_paper_lean": 1.0,
+   "reuse_aware_lean": 0.99888,
+   "ra_v1_cost": 0.997965,
+   "ra_v2_alpha": 0.998689,
+   "ra_v3_evict": 0.998559
+  }
+ },
+ "alpha_changes": {
+  "changes": 6237,
+  "without_preceding_eviction": 0
+ }
+}

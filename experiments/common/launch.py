@@ -19,7 +19,9 @@ ALIASES = {"prefill_overlap": {"run": "run_prefill", "analyze": "analyze_prefill
            "runtime_q": {"run": "driver", "train": "train_all", "analyze": "analyze_eval", "plot": "figures"}}
 GPU_COMMANDS = {"baseline", "bench_decode_moe", "bench_prefill_bandwidth", "bench_load_weight_generic", "bench_offload_cache_copy",
                 "run_prefill", "run_experiment", "driver", "collect_moe_routes", "collect_gemma_routes", "collect_gemma_rerouting",
-                "run_masked_inference75", "run_pruning_performance75", "representative_layer_sweep", "branch_oracle", "bandwidth_study"}
+                "run_masked_inference75", "run_pruning_performance75", "representative_layer_sweep", "branch_oracle", "bandwidth_study",
+                "m_reduction_collect", "m_reduction_nvfp4_collect", "m_reduction_calibrate", "m_reduction_numerics",
+                "elastic_validate", "elastic_session"}
 
 
 def utc():

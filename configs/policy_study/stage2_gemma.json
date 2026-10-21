@@ -1,0 +1,698 @@
+{
+ "model": "gemma",
+ "note": "Policy study plans (decision policy is the only variable).\n\nEstablished workload: the cross-model reuse_aware study (results/reuse_aware_models/\nstudy_20261020T071921Z): tasks 0-2 of experiments/prompts/reuse_aware_tasks.jsonl (code,\nsummarization, math), 128 greedy decode tokens, one warm-up generate per episode, 3 burn-in\nepisodes per server, per-model cache rates and serve flags as in configs/runtime_q/\nreuse_aware_models/<model>.json. Every hooked arm runs on the same lean harness\n(reuse_aware_rv_hook.py); repeat 3 writes the decision log and is excluded from timing.\n\nStage 1 (all cells): A paper q* (min one fill), A0 paper q* (no minimum; earlier implementation),\nE built-in q*, B original Reuse-Aware; unhooked A0 and E on the code task.\nStage 2 (lowest/highest cache rate x code/math): A, B, Policy C = V1/V2/V3 alone, pairs, all three.",
+ "groups": [
+  {
+   "workload": "rate0.10",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 4,
+   "burnin": 3,
+   "hook": "experiments/runtime_q/instrumentation/reuse_aware_rv_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper_min1",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.182188
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    }
+   ]
+  },
+  {
+   "workload": "rate0.10",
+   "cache_rate": 0.1,
+   "problem": 2,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 4,
+   "burnin": 3,
+   "hook": "experiments/runtime_q/instrumentation/reuse_aware_rv_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper_min1",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.182188
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    }
+   ]
+  },
+  {
+   "workload": "rate0.20",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 4,
+   "burnin": 3,
+   "hook": "experiments/runtime_q/instrumentation/reuse_aware_rv_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper_min1",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.182188
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    }
+   ]
+  },
+  {
+   "workload": "rate0.20",
+   "cache_rate": 0.2,
+   "problem": 2,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.8",
+    "--max-seq-len",
+    "1280",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "repeats": 4,
+   "burnin": 3,
+   "hook": "experiments/runtime_q/instrumentation/reuse_aware_rv_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 36.83,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper_min1",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.182188
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated"
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/stage2_lean_gemma.csv",
+     "log_rep": 3
+    }
+   ]
+  }
+ ]
+}

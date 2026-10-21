@@ -1,0 +1,86 @@
+{
+ "model": "qwen",
+ "note": "Write the frozen prompt file and the run plans of the q* / Reuse-Aware / Runtime-Variable study.\n\nEvery setting below is copied from a cited source (docs/AUDIT.md, provenance table); nothing is\ntuned here. Run once; the outputs are versioned next to this file and must not be edited by hand.\n\n  prompts   AIME-25 problems 0-2 from the official decode benchmark's dataset (upstream\n            benchmarks/bench_decode_moe.py: math-ai/aime25 test.jsonl, problem 0 by default);\n            paper workload W1 is AIME (section 5.1).\n  model     Qwen3.6-35B-A3B NVFP4 (paper section 5.1 model; NVFP4 is the paper's 8 GB-laptop\n            build), pinned revision of configs/pruning/models.json.\n  cache     --moe-cache-auto (paper section 3.3; upstream default when no size flag is given). The\n            driver always passes --cache-rate, and the runtime maps rate 0 to auto\n            (server/args.py: offload backends with no cache flag default to --moe-cache-auto).\n  decode    256 tokens, the upstream benchmark default; one warm-up generate per episode.\n  serving   the established qwen_nvfp4 profile: memory ratio 0.9, 2048-token limit, text only,\n            1024-token prefill cap, 5 CPU workers, serial expert load, naive KV, greedy, eager.\n  policies  A paper q* (min one fill), B original Reuse-Aware, the seven V1/V2/V3 combinations;\n            A0 (no minimum) and E (built-in q*) as labelled diagnostics; unhooked A0 and E on\n            problem 0 to measure the harness overhead.",
+ "groups": [
+  {
+   "workload": "auto",
+   "cache_rate": 0,
+   "prompts": "q_expswithreuse_aware/config/prompts_aime25.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--text-model-only",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "save_text": true,
+   "problem": 0,
+   "repeats": 1,
+   "burnin": 1,
+   "hook": "q_expswithreuse_aware/policy/qexp_hook.py",
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.71,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.38,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "A_qstar_paper_min1",
+     "spec": {
+      "kind": "fraction_min1",
+      "fraction": 0.21383
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/smoke_lean_qwen.csv",
+     "log_rep": 0
+    },
+    {
+     "name": "B_reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/smoke_lean_qwen.csv",
+     "log_rep": 0
+    },
+    {
+     "name": "C_V1V2V3",
+     "spec": {
+      "kind": "reuse_aware_v",
+      "cost": "runtime",
+      "reuse": "calibrated",
+      "evict": true
+     },
+     "groups": [
+      "BASE"
+     ],
+     "control": {
+      "features": "lean"
+     },
+     "log": "results/smoke_lean_qwen.csv",
+     "log_rep": 0
+    }
+   ]
+  }
+ ]
+}

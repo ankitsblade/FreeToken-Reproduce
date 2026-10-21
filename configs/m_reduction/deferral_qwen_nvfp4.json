@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "deferred_models": ["qwen_nvfp4"],
+  "authorized_by": "user",
+  "authorized_utc": "2026-10-13T19:00:00Z",
+  "reason": "Qwen pilot qualification blocked by host swap-settle gate; user requested GPT-OSS and Gemma primary collection first",
+  "scope": "collection_order_only",
+  "deferred_model_remains_required": true,
+  "next_stage_requires_all_models": true
+}

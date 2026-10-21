@@ -34,6 +34,28 @@ that external source with `uv pip`. It uses the official PyTorch CUDA 13 index f
 observed `torch==2.11.0+cu130` build. The environment is kept in `.venv`; `--inexact`
 preserves the inference packages while syncing the analysis lock.
 
+### CUDA package download timeouts
+
+Setup defaults to a 300-second HTTP read timeout, five HTTP retries and at most
+four concurrent downloads. Existing `UV_HTTP_TIMEOUT`, `UV_HTTP_RETRIES` and
+`UV_CONCURRENT_DOWNLOADS` values override these defaults. These controls are
+documented in [uv's environment reference](https://docs.astral.sh/uv/reference/environment/#uv_http_timeout).
+
+If a large wheel such as `nvidia-nccl-cu13==2.28.9` fails with a network timeout
+while being extracted, rerun setup with:
+
+```bash
+UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5 UV_CONCURRENT_DOWNLOADS=4 bash scripts/setup.sh
+```
+
+The same command also works with the original setup script. Completed downloads
+can be reused from [uv's cache](https://docs.astral.sh/uv/concepts/cache/).
+Setup records console output and its exit code in a unique ignored
+`results/setup/UTC_SUFFIX/` directory. This retry keeps the pinned package versions.
+
+If reads still time out on a slow or unstable connection, use a 600-second timeout
+and one concurrent download for the next attempt.
+
 To use an existing source dependency:
 
 ```bash
@@ -84,6 +106,13 @@ the config file's recorded revision. Metadata hashes are recorded; this baseline
 not hash all weight shards or validate their download metadata as the pruning audit does.
 FTW imports from the old studies remain historical artifacts; these baseline profiles
 expect a Hugging Face checkpoint directory with `config.json`.
+
+For a new numerical correction, pass `--calibration /path/to/fresh/profile.json`
+to `scripts/baseline.sh`. The baseline records that file's hash and the correction's
+precision flags. An already running m-reduction recovery controller can resolve
+its own single recorded matching profile from its study root; a missing or ambiguous
+profile fails. A correction baseline must not reuse the default bandwidth cache
+from a different numerical arm.
 
 `--cache-slots`, `--memory-ratio`, `--cpu-threads` and `--allow-unpinned` are explicit
 ways to define another arm. Report their use. Baseline timing is not numerical
@@ -193,6 +222,14 @@ dependencies and platform-specific binaries to be rebuilt and identified on the 
 | GPU lacks the checkpoint's kernel path | Qualify the required backend/dependencies or choose an explicitly new supported configuration | Do not claim equivalent quantization/results |
 
 ## 7. Backups and audit
+
+For the current m-reduction queue, `tmux attach -t m_reduction_v3` opens the live
+display. A separate user service keeps `results/m_reduction/monitor/latest.txt`
+and `heartbeat.json` current if tmux is unavailable and restores its display.
+Check it with `systemctl --user status m_reduction_watchdog`; follow its log with
+`journalctl --user -u m_reduction_watchdog -f`. To stop this monitor deliberately,
+use `systemctl --user stop m_reduction_watchdog` and close only its `progress` pane.
+The transient service survives tmux closure but is not installed to start at boot.
 
 `archives/layout_20261013/` holds verified ZIPs for the engine/build tree, original local
 experiment sources and each contributor folder, plus the pre-cleanup tracked diff.

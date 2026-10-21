@@ -1,0 +1,26 @@
+{
+ "log": "results/policy_study/20261021T090614Z/runtime_q/results/stage1_lean_gpt_oss.csv",
+ "rows": 109728,
+ "decisions_vs_own_rule": {
+  "B_reuse_aware": {
+   "rows": 27432,
+   "mismatch": 0,
+   "fetching_rows": 4085
+  }
+ },
+ "victims": {
+  "layers_with_fills": 27454,
+  "exact_match": 26928,
+  "match_rate": 0.980841,
+  "free_slot_fills": 1739,
+  "by_policy": {
+   "B_reuse_aware": 0.999021,
+   "A_qstar_paper_min1": 0.97567,
+   "A0_qstar_paper": 1.0
+  }
+ },
+ "alpha_changes": {
+  "changes": 24618,
+  "without_preceding_eviction": 0
+ }
+}

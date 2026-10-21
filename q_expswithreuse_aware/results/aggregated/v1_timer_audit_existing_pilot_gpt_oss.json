@@ -1,0 +1,105 @@
+{
+ "log": "results/reuse_aware_v2/pilot_20261020T140940Z/runtime_q/results/lean_gpt_oss.csv",
+ "rows": 73152,
+ "median_ms": {
+  "pre_ms": 0.3334,
+  "pcie_ms": 0.0308,
+  "gemm_ms": 0.2785,
+  "exposed_ms": 0.3922,
+  "wall_ms": 1.236,
+  "host_gap": 0.0863
+ },
+ "decide_us_median": 176.2,
+ "cpu_bound_layers": 39871,
+ "cpu_bound_moe_obs_minus_cpu_task_ms": {
+  "0.1": -0.0422,
+  "0.5": -0.0236,
+  "0.9": -0.0042
+ },
+ "by_policy": {
+  "qstar_engine_lean": {
+   "rows": 12192,
+   "bias_ms": 0.0938,
+   "mae_ms": 0.1027,
+   "median_ape_pct": 6.43,
+   "fills_per_layer": 0.0,
+   "fit_ms_median": {
+    "g0_ms": 0.0,
+    "tp_ms": 1.9756,
+    "c0_ms": 0.0,
+    "tc_ms": 0.4168,
+    "v_hit_ms": 0.4168
+   }
+  },
+  "qstar_paper_lean": {
+   "rows": 11995,
+   "bias_ms": 0.0301,
+   "mae_ms": 0.0449,
+   "median_ape_pct": 4.48,
+   "fills_per_layer": 0.0825,
+   "fit_ms_median": {
+    "g0_ms": 0.3272,
+    "tp_ms": 1.7964,
+    "c0_ms": 0.0146,
+    "tc_ms": 0.4011,
+    "v_hit_ms": 0.3791
+   }
+  },
+  "ra_v1_cost": {
+   "rows": 9151,
+   "bias_ms": 0.016,
+   "mae_ms": 0.0477,
+   "median_ape_pct": 4.7,
+   "fills_per_layer": 0.1085,
+   "fit_ms_median": {
+    "g0_ms": 0.3943,
+    "tp_ms": 1.7565,
+    "c0_ms": 0.0181,
+    "tc_ms": 0.4012,
+    "v_hit_ms": 0.3365
+   }
+  },
+  "ra_v2_alpha": {
+   "rows": 8926,
+   "bias_ms": 0.0119,
+   "mae_ms": 0.0371,
+   "median_ape_pct": 3.08,
+   "fills_per_layer": 0.3512,
+   "fit_ms_median": {
+    "g0_ms": 0.3098,
+    "tp_ms": 1.8486,
+    "c0_ms": 0.0353,
+    "tc_ms": 0.3982,
+    "v_hit_ms": 0.3486
+   }
+  },
+  "ra_v3_evict": {
+   "rows": 8996,
+   "bias_ms": 0.0213,
+   "mae_ms": 0.0391,
+   "median_ape_pct": 3.78,
+   "fills_per_layer": 0.0798,
+   "fit_ms_median": {
+    "g0_ms": 0.3131,
+    "tp_ms": 1.8451,
+    "c0_ms": 0.0229,
+    "tc_ms": 0.3932,
+    "v_hit_ms": 0.3391
+   }
+  },
+  "reuse_aware_lean": {
+   "rows": 9107,
+   "bias_ms": 0.0281,
+   "mae_ms": 0.0544,
+   "median_ape_pct": 6.46,
+   "fills_per_layer": 0.1984,
+   "fit_ms_median": {
+    "g0_ms": 0.3116,
+    "tp_ms": 1.8324,
+    "c0_ms": 0.0235,
+    "tc_ms": 0.4077,
+    "v_hit_ms": 0.365
+   }
+  }
+ }
+}

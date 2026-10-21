@@ -1,0 +1,779 @@
+{
+ "model": "gpt_oss",
+ "groups": [
+  {
+   "workload": "rate0.10",
+   "cache_rate": 0.1,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.10",
+   "cache_rate": 0.1,
+   "problem": 1,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.10",
+   "cache_rate": 0.1,
+   "problem": 2,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.20",
+   "cache_rate": 0.2,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.20",
+   "cache_rate": 0.2,
+   "problem": 1,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.20",
+   "cache_rate": 0.2,
+   "problem": 2,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.40",
+   "cache_rate": 0.4,
+   "problem": 0,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.40",
+   "cache_rate": 0.4,
+   "problem": 1,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  },
+  {
+   "workload": "rate0.40",
+   "cache_rate": 0.4,
+   "problem": 2,
+   "repeats": 3,
+   "burnin": 3,
+   "prompts": "experiments/prompts/reuse_aware_tasks.jsonl",
+   "serve_args": [
+    "--mem-ratio",
+    "0.9",
+    "--max-seq-len",
+    "2048",
+    "--max-prefill-length",
+    "1024",
+    "--cpu-threads",
+    "5",
+    "--serial-load"
+   ],
+   "env": {
+    "FREETOKEN_BENCHBW_PATH": "/home/ankit/Development/FreeToken-Reproduce/results/reuse_aware_models/study_20261020T071921Z/calibration/benchbw.json",
+    "FREETOKEN_MOE_RUNTIME_Q_BP": 6.7,
+    "FREETOKEN_MOE_RUNTIME_Q_BH": 31.76,
+    "FREETOKEN_DISABLE_OVERLAP_SCHEDULING": 1,
+    "MALLOC_ARENA_MAX": 2,
+    "OMP_NUM_THREADS": 1,
+    "MKL_NUM_THREADS": 1
+   },
+   "episodes": [
+    {
+     "name": "qstar_paper",
+     "spec": {
+      "kind": "fraction",
+      "fraction": 0.210957
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "qstar_engine",
+     "spec": {
+      "kind": "native"
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    },
+    {
+     "name": "reuse_aware_uniform_p",
+     "spec": {
+      "kind": "reuse_aware",
+      "kappa": 1.0,
+      "per_expert": false
+     },
+     "groups": [
+      "BASE",
+      "G1_routing",
+      "G6_cache",
+      "G7_reuse"
+     ],
+     "log": "results/decisions_gpt_oss.csv"
+    }
+   ]
+  }
+ ]
+}

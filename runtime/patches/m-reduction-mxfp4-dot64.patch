@@ -1,0 +1,262 @@
+--- a/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
++++ b/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
+@@ -1009,6 +1009,49 @@
+ }
+ #endif
+ 
++// Higher-precision diagnostic arm: identical BF16 boundaries, FP64 projections.
++void mxfp4_gemv_f64_scalar(float* out, const uint8_t* blk, const uint8_t* scl,
++                          const bf16_t* x, int Kpairs, int N2, int ncol,
++                          const float* e2m1, const float* e8m0) {
++  for (int c = 0; c < ncol; ++c) {
++    double acc = 0.0;
++    for (int kb = 0; kb < Kpairs; ++kb) {
++      const uint8_t w = blk[(size_t)kb * N2 + c];
++      const double scale = e8m0[scl[(size_t)(kb >> 4) * N2 + c]];
++      acc += (double)e2m1[w & 15] * scale * (double)bf16_to_f32(x[2 * kb]);
++      acc += (double)e2m1[w >> 4] * scale * (double)bf16_to_f32(x[2 * kb + 1]);
++    }
++    out[c] = static_cast<float>(acc);
++  }
++}
++#if CPU_MOE_X86
++__attribute__((target("avx512f,avx2")))
++void mxfp4_gemv_f64_avx512(float* out, const uint8_t* blk, const uint8_t* scl,
++                          const bf16_t* x, int Kpairs, int N2, int ncol,
++                          const float* e2m1, const float* e8m0) {
++  int c = 0;
++  for (; c + 8 <= ncol; c += 8) {
++    __m512d acc = _mm512_setzero_pd();
++    for (int kb = 0; kb < Kpairs; ++kb) {
++      __m256i packed = _mm256_cvtepu8_epi32(_mm_loadl_epi64(
++          reinterpret_cast<const __m128i*>(blk + (size_t)kb * N2 + c)));
++      __m256i lo = _mm256_and_si256(packed, _mm256_set1_epi32(15));
++      __m256i hi = _mm256_srli_epi32(packed, 4);
++      __m256i si = _mm256_cvtepu8_epi32(_mm_loadl_epi64(
++          reinterpret_cast<const __m128i*>(scl + (size_t)(kb >> 4) * N2 + c)));
++      __m512d scale = _mm512_cvtps_pd(_mm256_i32gather_ps(e8m0, si, 4));
++      __m512d wl = _mm512_mul_pd(_mm512_cvtps_pd(_mm256_i32gather_ps(e2m1, lo, 4)), scale);
++      __m512d wh = _mm512_mul_pd(_mm512_cvtps_pd(_mm256_i32gather_ps(e2m1, hi, 4)), scale);
++      acc = _mm512_fmadd_pd(wl, _mm512_set1_pd(bf16_to_f32(x[2 * kb])), acc);
++      acc = _mm512_fmadd_pd(wh, _mm512_set1_pd(bf16_to_f32(x[2 * kb + 1])), acc);
++    }
++    _mm256_storeu_ps(out + c, _mm512_cvtpd_ps(acc));
++  }
++  if (c < ncol)
++    mxfp4_gemv_f64_scalar(out + c, blk + c, scl + c, x, Kpairs, N2, ncol - c, e2m1, e8m0);
++}
++#endif
++
+ mxgemv_fn select_mxgemv() {
+   const IsaTier t = pick_isa();
+ #if CPU_MOE_X86
+@@ -1267,6 +1310,7 @@
+   bool use_q4a8 = false;       // q4_0: always W4A8 (llama.cpp Q4_0 x Q8_0); int8 pre-quant
+   dsdot_fn dsdot;
+   mxgemv_fn mxgemv;
++  bool mxfp4_dot64 = false;
+   bool mxfp4_align = false;  // Opt-in ABI: FP32 partial output for MXFP4 only.
+   q4dot_fn q4dot;
+   // ds_fp4: the caller already FP8-round-tripped the input activations on the GPU
+@@ -1731,7 +1775,11 @@
+       if (gate > lim) gate = lim;
+       if (up > lim) up = lim;
+       else if (up < -lim) up = -lim;
+-      const float glu = gate / (1.0f + std::exp(-gate * alpha));  // gate * sigmoid(alpha*gate)
++      const float exponent_arg = -gate * alpha;
++      const float exponential = mxfp4_dot64
++          ? static_cast<float>(std::exp(static_cast<double>(exponent_arg)))
++          : std::exp(exponent_arg);
++      const float glu = gate / (1.0f + exponential);
+       g_row[i0 + j] = f32_to_bf16(glu * (up + 1.0f));
+     }
+   }
+@@ -2185,6 +2233,15 @@
+       .def("set_input_prequant",
+            [](CpuMoeExecutor& e, bool v) { e.input_prequant = v; },
+            py::arg("value"))
++      .def("set_mxfp4_dot64", [](CpuMoeExecutor& e) {
++        if (e.fmt != WF_MXFP4 || !e.mxfp4_align || !e.owned_tasks.empty())
++          throw std::runtime_error("FP64 MXFP4 projection requires alignment before tasks");
++        e.mxfp4_dot64 = true;
++        e.mxgemv = mxfp4_gemv_f64_scalar;
++#if CPU_MOE_X86
++        if (pick_isa() >= ISA_AVX512) e.mxgemv = mxfp4_gemv_f64_avx512;
++#endif
++      })
+       .def("set_mxfp4_alignment", [](CpuMoeExecutor& e, bool value) {
+         if (e.fmt != WF_MXFP4 && value)
+           throw std::runtime_error("MXFP4 alignment requested for another format");
+--- a/python/freetoken/kernel/moe_impl.py
++++ b/python/freetoken/kernel/moe_impl.py
+@@ -292,6 +292,7 @@
+     alpha: float,
+     limit: float,
+     compute_type: torch.dtype,
++    precise: bool = False,
+ ) -> None:
+     import triton
+     import triton.language as tl
+@@ -318,8 +319,8 @@
+         alpha,
+         limit,
+         BLOCK_SIZE=block_size,  # type: ignore
+-        compute_type=dtype,  # type: ignore
+-        num_warps=4,  # type: ignore
++        compute_type=dtype, PRECISE=precise,  # type: ignore
++        num_warps=4, enable_fp_fusion=not precise,  # type: ignore
+     )
+ 
+ 
+@@ -473,9 +474,11 @@
+ 
+     from .triton.mxfp4_moe import mxfp4_splitk_gemv_kernel, mxfp4_splitk_reduce_kernel
+ 
++    import os
++    dot64 = os.getenv("FREETOKEN_M_REDUCTION_MXFP4_DOT64") == "1"
+     routes = expert_ids.shape[0]
+     if partial is None:
+-        partial = torch.empty(routes * num_splits, N, dtype=torch.float32, device=x.device)
++        partial = torch.empty(routes * num_splits, N, dtype=torch.float64 if dot64 else torch.float32, device=x.device)
+     if out is None:
+         out = torch.empty(routes, N, dtype=torch.bfloat16, device=x.device)
+     has_bias = bias is not None and bias.numel() > 0
+@@ -491,13 +494,14 @@
+         stride_xe, w_blocks_t.stride(0), w_blocks_t.stride(1),
+         w_scales_t.stride(0), w_scales_t.stride(1), bias_stride, N,
+         HAS_BIAS=has_bias, BLOCK_N=block_n,  # type: ignore
+-        NUM_K_SPLITS=num_splits, K_GROUPS_PER_SPLIT=kgps,  # type: ignore
++        NUM_K_SPLITS=num_splits, K_GROUPS_PER_SPLIT=kgps, DOT64=dot64,  # type: ignore
+         num_warps=num_warps,
+     )
+     has_wts = expert_wts is not None
+     rgrid = (triton.cdiv(N, block_n), routes)
+     mxfp4_splitk_reduce_kernel[rgrid](
+         partial, out, N, expert_wts if has_wts else x,
++        bias_arg, expert_ids, bias_stride, HAS_BIAS=has_bias, DOT64=dot64,
+         HAS_EXPERT_WTS=has_wts, NUM_K_SPLITS=num_splits, BLOCK_N=block_n,  # type: ignore
+         num_warps=num_warps,
+     )
+--- a/python/freetoken/kernel/triton/mxfp4_moe.py
++++ b/python/freetoken/kernel/triton/mxfp4_moe.py
+@@ -1,5 +1,6 @@
+ import triton
+ import triton.language as tl
++from triton.language.extra.cuda import libdevice
+ 
+ 
+ # ── Split-K expert GEMV (transposed weight layout [E, K_bytes, N]) ──────────
+@@ -44,6 +45,7 @@
+     BLOCK_N: tl.constexpr,
+     NUM_K_SPLITS: tl.constexpr,
+     K_GROUPS_PER_SPLIT: tl.constexpr,
++    DOT64: tl.constexpr,
+ ):
+     pid_n = tl.program_id(0)
+     pid_ek = tl.program_id(1)
+@@ -58,14 +60,14 @@
+     kg0 = pid_k * K_GROUPS_PER_SPLIT
+     kg1 = tl.minimum(kg0 + K_GROUPS_PER_SPLIT, k_groups)
+ 
+-    acc = tl.zeros([BLOCK_N], dtype=tl.float32)
++    acc = tl.zeros([BLOCK_N], dtype=tl.float64 if DOT64 else tl.float32)
+     w_base = expert_id * stride_we
+     s_base = expert_id * stride_se
+     x_base = pid_e * stride_xe
+ 
+     for kg in range(kg0, kg1):
+         s_val = tl.load(s_ptr + s_base + kg * stride_sk + offs_n, mask=mask_n, other=0)
+-        scale_f = _e8m0_scale(s_val)
++        scale_f = _e8m0_scale(s_val).to(tl.float64 if DOT64 else tl.float32)
+         for kk in tl.static_range(16):
+             k_packed = kg * 16 + kk
+             w_byte = tl.load(
+@@ -73,12 +75,12 @@
+             ).to(tl.int32)
+             lo = w_byte & 0x0F
+             hi = (w_byte >> 4) & 0x0F
+-            x_lo = tl.load(x_ptr + x_base + kg * 32 + kk * 2).to(tl.float32)
+-            x_hi = tl.load(x_ptr + x_base + kg * 32 + kk * 2 + 1).to(tl.float32)
++            x_lo = tl.load(x_ptr + x_base + kg * 32 + kk * 2).to(tl.float64 if DOT64 else tl.float32)
++            x_hi = tl.load(x_ptr + x_base + kg * 32 + kk * 2 + 1).to(tl.float64 if DOT64 else tl.float32)
+             acc += _fp4_table_lut(lo, lut_ptr) * scale_f * x_lo
+             acc += _fp4_table_lut(hi, lut_ptr) * scale_f * x_hi
+ 
+-    if HAS_BIAS and pid_k == 0:
++    if HAS_BIAS and pid_k == 0 and not DOT64:
+         acc += tl.load(
+             bias_ptr + expert_id * stride_be + offs_n, mask=mask_n, other=0.0
+         ).to(tl.float32)
+@@ -93,6 +95,9 @@
+     out_ptr,
+     N,
+     expert_wts_ptr,
++    bias_ptr, expert_ids_ptr, stride_be,
++    HAS_BIAS: tl.constexpr,
++    DOT64: tl.constexpr,
+     HAS_EXPERT_WTS: tl.constexpr,
+     NUM_K_SPLITS: tl.constexpr,
+     BLOCK_N: tl.constexpr,
+@@ -102,11 +107,16 @@
+     offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+     mask_n = offs_n < N
+     ewt = tl.load(expert_wts_ptr + pid_e) if HAS_EXPERT_WTS else 1.0
+-    acc = tl.zeros([BLOCK_N], dtype=tl.float32)
++    acc = tl.zeros([BLOCK_N], dtype=tl.float64 if DOT64 else tl.float32)
+     for k in range(NUM_K_SPLITS):
+         acc += tl.load(
+             partial_ptr + (pid_e * NUM_K_SPLITS + k) * N + offs_n, mask=mask_n, other=0.0
+         )
++    if DOT64:
++        acc = acc.to(tl.float32)
++        if HAS_BIAS:
++            expert_id = tl.load(expert_ids_ptr + pid_e)
++            acc += tl.load(bias_ptr + expert_id * stride_be + offs_n, mask=mask_n, other=0.0).to(tl.float32)
+     if HAS_EXPERT_WTS:
+         acc *= ewt
+     tl.store(out_ptr + pid_e * N + offs_n, acc.to(tl.bfloat16), mask=mask_n)
+@@ -254,6 +264,7 @@
+     limit: tl.constexpr,
+     BLOCK_SIZE: tl.constexpr,
+     compute_type: tl.constexpr,
++    PRECISE: tl.constexpr,
+ ):
+     route_id = tl.program_id(0)
+     block_id = tl.program_id(1)
+@@ -273,7 +284,12 @@
+ 
+     gate = tl.minimum(gate, limit)
+     up = tl.minimum(tl.maximum(up, -limit), limit)
+-    activated = gate * (1.0 / (1.0 + tl.exp(-(gate * alpha)))) * (up + 1.0)
++    if PRECISE:
++        exponential = libdevice.exp((-(gate * alpha)).to(tl.float64)).to(tl.float32)
++        glu = libdevice.div_rn(gate, 1.0 + exponential)
++        activated = glu * (up + 1.0)
++    else:
++        activated = gate * (1.0 / (1.0 + tl.exp(-(gate * alpha)))) * (up + 1.0)
+ 
+     tl.store(
+         out_ptr + route_id * stride_out_m + offs_i * stride_out_n,
+--- a/python/freetoken/moe/cpu_executor.py
++++ b/python/freetoken/moe/cpu_executor.py
+@@ -248,6 +248,10 @@
+             if not hasattr(self._ext, "set_mxfp4_alignment"):
+                 raise RuntimeError("MXFP4 alignment requires a rebuilt CPU extension")
+             self._ext.set_mxfp4_alignment(True)
++            if os.getenv("FREETOKEN_M_REDUCTION_MXFP4_DOT64") == "1":
++                if not hasattr(self._ext, "set_mxfp4_dot64"):
++                    raise RuntimeError("FP64 MXFP4 projection requires rebuilt extension")
++                self._ext.set_mxfp4_dot64()
+         self.num_threads = nthreads
+         self.core_ids = core_ids
+         self.isa = self._ext.isa_name()
+--- a/python/freetoken/moe/fused_mxfp4.py
++++ b/python/freetoken/moe/fused_mxfp4.py
+@@ -262,6 +262,7 @@
+         alpha=hidden_act_alpha,
+         limit=swiglu_limit if swiglu_limit is not None else float("inf"),
+         compute_type=compute_type,
++        precise=__import__("os").getenv("FREETOKEN_M_REDUCTION_MXFP4_DOT64") == "1",
+     )
+ 
+     dp_splits = _decode_split_count(routes, local_intermediate_size // 32, target_programs=72)

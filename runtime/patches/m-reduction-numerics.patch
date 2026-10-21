@@ -1,0 +1,13 @@
+--- a/python/freetoken/layers/moe.py
++++ b/python/freetoken/layers/moe.py
+@@ -331,6 +331,10 @@
+             maybe_run(self, cache, hidden_states, topk_weights, topk_ids)
+         if cache.decode_trace is not None:
+             cache.decode_trace.start_layer()
++        if os.getenv("FREETOKEN_M_REDUCTION_NUMERICS_OUT"):
++            from experiments.pruning.m_reduction_numerics import probe
++
++            probe(self, cache, hidden_states, topk_weights, topk_ids)
+         raw = topk_ids.clone()  # raw expert ids for the CPU partial
+         cache.ensure_experts_hybrid(self.layer_id, topk_ids)  # -> slot (hit/fetched) or -1
+         if cache.collect_stats:

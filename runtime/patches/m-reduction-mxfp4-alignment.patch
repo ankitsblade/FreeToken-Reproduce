@@ -1,0 +1,147 @@
+--- a/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
++++ b/python/freetoken/kernel/csrc/cpu_moe/cpu_moe_ext.cpp
+@@ -1267,6 +1267,7 @@
+   bool use_q4a8 = false;       // q4_0: always W4A8 (llama.cpp Q4_0 x Q8_0); int8 pre-quant
+   dsdot_fn dsdot;
+   mxgemv_fn mxgemv;
++  bool mxfp4_align = false;  // Opt-in ABI: FP32 partial output for MXFP4 only.
+   q4dot_fn q4dot;
+   // ds_fp4: the caller already FP8-round-tripped the input activations on the GPU
+   // (same reference grid), so submit() must not repeat it on the host-callback
+@@ -1723,6 +1724,10 @@
+     for (int j = 0; j < nunit; ++j) {
+       float gate = gu[2 * j] + bf16_to_f32(bias_e[2 * j]);
+       float up = gu[2 * j + 1] + bf16_to_f32(bias_e[2 * j + 1]);
++      if (mxfp4_align) {
++        gate = bf16_to_f32(f32_to_bf16(gate));
++        up = bf16_to_f32(f32_to_bf16(up));
++      }
+       if (gate > lim) gate = lim;
+       if (up > lim) up = lim;
+       else if (up < -lim) up = -lim;
+@@ -1754,10 +1759,18 @@
+       float part[HBLK];
+       mxgemv(part, blk_e + h0, scl_e + h0, g_row, Ih, H, nh, e2m1_lut, e8m0_lut);
+       const bf16_t* bias_e = dn_bias_l + (size_t)e * H + h0;
+-      for (int c = 0; c < nh; ++c) acc[c] += (part[c] + bf16_to_f32(bias_e[c])) * wt;
+-    }
+-    bf16_t* y_row = t->y + (size_t)tok * H;
+-    for (int c = 0; c < nh; ++c) y_row[h0 + c] = f32_to_bf16(acc[c]);
++      for (int c = 0; c < nh; ++c) {
++        const float weighted = (part[c] + bf16_to_f32(bias_e[c])) * wt;
++        acc[c] += mxfp4_align ? bf16_to_f32(f32_to_bf16(weighted)) : weighted;
++      }
++    }
++    if (mxfp4_align) {
++      float* y_row = reinterpret_cast<float*>(t->y) + (size_t)tok * H;
++      for (int c = 0; c < nh; ++c) y_row[h0 + c] = acc[c];
++    } else {
++      bf16_t* y_row = t->y + (size_t)tok * H;
++      for (int c = 0; c < nh; ++c) y_row[h0 + c] = f32_to_bf16(acc[c]);
++    }
+   }
+ 
+   // ----------------------------- ds_fp4 (DSV4) -------------------------------
+@@ -2172,6 +2185,13 @@
+       .def("set_input_prequant",
+            [](CpuMoeExecutor& e, bool v) { e.input_prequant = v; },
+            py::arg("value"))
++      .def("set_mxfp4_alignment", [](CpuMoeExecutor& e, bool value) {
++        if (e.fmt != WF_MXFP4 && value)
++          throw std::runtime_error("MXFP4 alignment requested for another format");
++        if (!e.owned_tasks.empty())
++          throw std::runtime_error("alignment must be set before creating tasks");
++        e.mxfp4_align = value;
++      }, py::arg("value"))
+       .def("isa_name", &CpuMoeExecutor::isa_name);
+   m.def("memops_probe", &cumemops_probe, py::arg("stream"), py::arg("scratch_addr"));
+   m.def("memop_submit", &cumemop_submit, py::arg("stream"), py::arg("done_addr"),
+--- a/python/freetoken/moe/cpu_executor.py
++++ b/python/freetoken/moe/cpu_executor.py
+@@ -189,6 +189,7 @@
+         self.num_experts = int(cache.num_experts)
+         self.top_k = int(top_k)
+         self.quant_format = fmt
++        self._mxfp4_align = fmt == "mxfp4_triton" and os.getenv("FREETOKEN_M_REDUCTION_MXFP4_ALIGN") == "1"
+         self.device = device
+         self.max_tokens = int(max_tokens)
+         self.apply_router_weight_on_input = bool(apply_router_weight_on_input)
+@@ -243,6 +244,10 @@
+             core_ids=core_ids,
+             **ptrs,
+         )
++        if self._mxfp4_align:
++            if not hasattr(self._ext, "set_mxfp4_alignment"):
++                raise RuntimeError("MXFP4 alignment requires a rebuilt CPU extension")
++            self._ext.set_mxfp4_alignment(True)
+         self.num_threads = nthreads
+         self.core_ids = core_ids
+         self.isa = self._ext.isa_name()
+@@ -497,7 +502,7 @@
+                 "x": alloc_pinned_tensor(bs, self.H, dtype=torch.bfloat16),
+                 "ids": alloc_pinned_tensor(bs, self.top_k, dtype=torch.int32),
+                 "w": alloc_pinned_tensor(bs, self.top_k, dtype=torch.float32),
+-                "y": alloc_pinned_tensor(bs, self.H, dtype=torch.bfloat16),
++                "y": alloc_pinned_tensor(bs, self.H, dtype=torch.float32 if self._mxfp4_align else torch.bfloat16),
+             }
+             self._io[bs] = io
+         return io
+@@ -572,7 +577,7 @@
+         io["w"].copy_(topk_weights.to(torch.float32), non_blocking=True)
+ 
+         task = self._task_for(layer_id, bs)
+-        out = torch.empty_like(hidden_states)
++        out = torch.empty_like(hidden_states, dtype=torch.float32 if self._mxfp4_align else hidden_states.dtype)
+         slot = self._flag_slots.get((layer_id, bs)) if self._flag_sync else None
+         if slot is not None:
+             # Front-end memops: done[slot]=0 then ready[slot]=1 (the coordinator's
+--- a/python/freetoken/moe/fused_mxfp4.py
++++ b/python/freetoken/moe/fused_mxfp4.py
+@@ -218,6 +218,7 @@
+     top_k: int,
+     hidden_act_alpha: float,
+     swiglu_limit: float | None,
++    partial_sum_float: bool = False,
+ ) -> torch.Tensor:
+     """Split-K GEMV MoE decode over TRANSPOSED MXFP4 weights:
+     gate_up_blocks_t [E, H//2, 2I], gate_up_scales_t [E, H//32, 2I], bias [E, 2I];
+@@ -270,7 +271,10 @@
+         stride_xe=hidden_out.stride(0), num_splits=dp_splits, expert_wts=route_weights,
+     )
+ 
+-    return down_out.view(M, top_k, H).sum(dim=1).to(compute_type)
++    routed = down_out.view(M, top_k, H)
++    if partial_sum_float:
++        return routed.float().sum(dim=1)
++    return routed.sum(dim=1).to(compute_type)
+ 
+ 
+ __all__ = [
+--- a/python/freetoken/layers/quantization/moe/mxfp4.py
++++ b/python/freetoken/layers/quantization/moe/mxfp4.py
+@@ -96,10 +96,13 @@
+         # the resident layer picks the split-K decode kernel by token count, not by phase
+         decode = x.shape[0] <= MXFP4_DECODE_MAX_TOKENS if is_resident(layer) else not is_prefill
+         run = run_mxfp4_splitk_decode_experts if decode else run_mxfp4_prefill_experts_t
++        import os
++        kwargs = ({"partial_sum_float": os.getenv("FREETOKEN_M_REDUCTION_MXFP4_ALIGN") == "1"
++                   and not is_prefill and not is_resident(layer)} if decode else {})
+         return run(
+             x, topk_weights, topk_ids,
+             t["gate_up"], t["gate_up_scale"], t["gate_up_bias"], t["down"], t["down_scale"], t["down_bias"],
+-            top_k=layer.top_k, hidden_act_alpha=float(layer.alpha), swiglu_limit=layer.limit,
++            top_k=layer.top_k, hidden_act_alpha=float(layer.alpha), swiglu_limit=layer.limit, **kwargs,
+         )
+ 
+ 
+--- a/python/freetoken/layers/moe.py
++++ b/python/freetoken/layers/moe.py
+@@ -374,6 +374,8 @@
+             replay_events["gpu_end"].record()
+         cpu_routed = cpu_routed_early if not _HYBRID_OVERLAP else executor.decode_sync(pending)
+         result = gpu_routed + cpu_routed
++        if getattr(executor, "_mxfp4_align", False):
++            result = result.to(hidden_states.dtype)
+         if os.getenv("FREETOKEN_MOE_ROUTING_ARM"):
+             from freetoken.moe.routing_trace import observer
+ 
